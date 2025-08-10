@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # Frontend - Next.js Development Server
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: swiss-railway-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+    env_file:
+      - ./frontend/.env.local
+    depends_on:
+      - backend
+    networks:
+      - swiss-railway-network
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # Backend - Node.js API Server (Future Implementation)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: swiss-railway-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=8000
+    env_file:
+      - ./backend/.env.local
+    networks:
+      - swiss-railway-network
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # Redis for caching (Optional for advanced features)
+  redis:
+    image: redis:7-alpine
+    container_name: swiss-railway-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - swiss-railway-network
+    restart: unless-stopped
+
+  # PostgreSQL for future data storage (Optional)
+  postgres:
+    image: postgres:15-alpine
+    container_name: swiss-railway-postgres
+    environment:
+      POSTGRES_DB: swiss_railway
+      POSTGRES_USER: railway_user
+      POSTGRES_PASSWORD: railway_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/sql:/docker-entrypoint-initdb.d
+    networks:
+      - swiss-railway-network
+    restart: unless-stopped
+
+networks:
+  swiss-railway-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
