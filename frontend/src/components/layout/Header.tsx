@@ -173,14 +173,14 @@ export function Header({ className }: HeaderProps) {
             <div className="flex items-center space-x-1">
               <Zap className="w-3 h-3 text-blue-500" />
               <span className="text-gray-600 dark:text-gray-400">
-                {activeTrains}
+                {stats?.trainsActive || 0} Trains
               </span>
             </div>
           </div>
           <div className="flex items-center space-x-1">
             <Clock className="w-3 h-3 text-gray-500" />
             <span className="text-gray-500 dark:text-gray-400">
-              {lastUpdate.toLocaleTimeString('de-CH', {
+              {stats?.lastUpdate?.toLocaleTimeString('de-CH', {
                 hour: '2-digit',
                 minute: '2-digit'
               })}
