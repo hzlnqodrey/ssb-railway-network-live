@@ -194,6 +194,21 @@ export function MapControls({
                 </div>
               </div>
             </div>
+
+            {/* TODO: */}
+            {/* Train Table - Arrival and Departure */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                Train Table
+              </h4>
+              <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="font-medium text-center text-blue-600 dark:text-blue-400">Train</div>
+                  <div className="text-center text-gray-600 dark:text-gray-400">Arrival</div>
+                  <div className="text-center text-gray-600 dark:text-gray-400">Departure</div> 
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

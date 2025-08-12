@@ -8,7 +8,7 @@ import { Header } from '@/components/layout/Header'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-// Dynamically import the map component to avoid SSR issues with Leaflet
+// Dynamically import the map component to avoid SSR issues with 
 const SwissRailwayMap = dynamic(
   () => import('@/components/map/SwissRailwayMap'),
   { 

@@ -4,16 +4,19 @@ import { useEffect, useState, useCallback } from 'react'
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Train, Station } from '@/types/railway'
+import { Train } from '@/types/railway'
 import { AnimatedTrainMarker } from './AnimatedTrainMarker'
 import { StationMarker } from './StationMarker'
 import { MapControls } from './MapControls'
 import { TrainDetails } from './TrainDetails'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useSwissRailwayData } from '@/hooks/useSwissRailwayData'
+import { mockTrainMovementService } from '@/services/mockTrainMovement'
+import { realTimeTrainService } from '@/services/realTimeTrainService'
 import { cn } from '@/lib/utils'
 
 // Fix for default markers in Leaflet
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: '/leaflet/marker-icon-2x.png',
@@ -29,79 +32,7 @@ interface SwissRailwayMapProps {
   className?: string
 }
 
-// Mock data for development - we'll replace this with real API calls
-const mockTrains: Train[] = [
-  {
-    id: 'IC-1-001',
-    name: 'IC 1',
-    category: 'IC',
-    number: '1',
-    operator: 'SBB',
-    to: 'St. Gallen',
-    position: { lat: 47.3769, lng: 8.5417 }, // Zurich
-    delay: 2,
-    cancelled: false,
-    speed: 85,
-    direction: 45,
-    lastUpdate: new Date().toISOString()
-  },
-  {
-    id: 'S-3-002',
-    name: 'S 3',
-    category: 'S',
-    number: '3',
-    operator: 'SBB',
-    to: 'Pfäffikon SZ',
-    position: { lat: 46.9481, lng: 7.4474 }, // Bern
-    delay: 0,
-    cancelled: false,
-    speed: 45,
-    direction: 120,
-    lastUpdate: new Date().toISOString()
-  },
-  {
-    id: 'RE-456-003',
-    name: 'RE 456',
-    category: 'RE',
-    number: '456',
-    operator: 'SBB',
-    to: 'Basel SBB',
-    position: { lat: 46.5197, lng: 6.6323 }, // Lausanne
-    delay: 5,
-    cancelled: false,
-    speed: 72,
-    direction: 280,
-    lastUpdate: new Date().toISOString()
-  }
-]
-
-const mockStations: Station[] = [
-  {
-    id: 'zurich-hb',
-    name: 'Zürich HB',
-    coordinate: { x: 8.5417, y: 47.3769 }
-  },
-  {
-    id: 'bern',
-    name: 'Bern',
-    coordinate: { x: 7.4474, y: 46.9481 }
-  },
-  {
-    id: 'geneva',
-    name: 'Genève',
-    coordinate: { x: 6.1432, y: 46.2044 }
-  },
-  {
-    id: 'basel',
-    name: 'Basel SBB',
-    coordinate: { x: 7.5893, y: 47.5479 }
-  },
-  {
-    id: 'lausanne',
-    name: 'Lausanne',
-    coordinate: { x: 6.6323, y: 46.5197 }
-  }
-]
+// Note: Mock stations for fallback - now using mock movement service for trains
 
 // Map updater component to handle real-time updates
 function MapUpdater({ trains }: { trains: Train[] }) {
@@ -130,19 +61,18 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
   const [showTrains, setShowTrains] = useState(true)
   const [mapType, setMapType] = useState<'standard' | 'satellite' | 'terrain'>('standard')
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(true)
+  const [dataSource, setDataSource] = useState<'mock' | 'real' | 'api'>('real') // Default to real SBB data
+  const [mockTrains, setMockTrains] = useState<Train[]>([])
+  const [realTrains, setRealTrains] = useState<Train[]>([])
+  const [updateInterval, setUpdateInterval] = useState<NodeJS.Timeout | null>(null)
 
   // Use our custom Swiss Railway data hook
   const {
     stations,
     trains,
-    isLoading,
     stationsLoading,
     trainsLoading,
-    hasError,
-    apiStatus,
-    rateLimitInfo,
-    stats,
-    refreshAllData
+    hasError
   } = useSwissRailwayData({
     enableRealtime: isRealtimeEnabled,
     realtimeInterval: 30000, // 30 seconds to respect rate limits
@@ -153,6 +83,97 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
 
   // Backwards compatibility for error handling
   const trainsError = hasError ? new Error('Failed to load railway data') : null
+
+  // Data source management - handles mock, real SBB, and API data
+  useEffect(() => {
+    const setupDataSource = async () => {
+      // Clean up previous intervals
+      if (updateInterval) {
+        clearInterval(updateInterval)
+        setUpdateInterval(null)
+      }
+      
+      // Stop all services
+      mockTrainMovementService.stopMovement()
+      realTimeTrainService.stopRealTimeService()
+      setMockTrains([])
+      setRealTrains([])
+      
+      if (!isRealtimeEnabled) return
+      
+      if (dataSource === 'mock') {
+        console.log('🎭 Starting mock train movement...')
+        
+        // Start mock service
+        mockTrainMovementService.startMovement(2000)
+        
+        // Update mock trains every 2 seconds
+        const interval = setInterval(() => {
+          const movingTrains = mockTrainMovementService.getMovingTrains()
+          setMockTrains(movingTrains)
+        }, 2000)
+        
+        setUpdateInterval(interval)
+        
+        // Get initial state
+        setMockTrains(mockTrainMovementService.getMovingTrains())
+        
+      } else if (dataSource === 'real') {
+        console.log('🚂 Starting real-time SBB train service...')
+        
+        try {
+          // Start real-time service
+          await realTimeTrainService.startRealTimeService(30000) // Update every 30 seconds
+          
+          // Update real trains every 10 seconds
+          const interval = setInterval(() => {
+            const movingTrains = realTimeTrainService.getMovingTrains()
+            setRealTrains(movingTrains)
+            console.log(`📍 Updated ${movingTrains.length} real trains`)
+          }, 10000)
+          
+          setUpdateInterval(interval)
+          
+          // Get initial state
+          setTimeout(() => {
+            const initialTrains = realTimeTrainService.getMovingTrains()
+            setRealTrains(initialTrains)
+          }, 2000) // Wait for initial data fetch
+          
+        } catch (error) {
+          console.error('Failed to start real-time service:', error)
+        }
+      }
+      // For 'api' dataSource, we use the existing trains from useSwissRailwayData hook
+    }
+    
+    setupDataSource()
+    
+    return () => {
+      if (updateInterval) {
+        clearInterval(updateInterval)
+      }
+      mockTrainMovementService.stopMovement()
+      realTimeTrainService.stopRealTimeService()
+    }
+  }, [dataSource, isRealtimeEnabled, updateInterval])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (updateInterval) {
+        clearInterval(updateInterval)
+      }
+      mockTrainMovementService.stopMovement()
+      realTimeTrainService.stopRealTimeService()
+    }
+  }, [updateInterval])
+
+  // Choose which trains to display based on data source
+  const displayTrains = 
+    dataSource === 'mock' ? mockTrains :
+    dataSource === 'real' ? realTrains :
+    trains // 'api' uses the hook's trains
 
   const getTileLayerUrl = useCallback(() => {
     switch (mapType) {
@@ -227,7 +248,7 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
         ))}
 
         {/* Animated Train Markers */}
-        {showTrains && trains.map((train) => (
+        {showTrains && displayTrains.map((train) => (
           <AnimatedTrainMarker
             key={train.id}
             train={train}
@@ -248,7 +269,8 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
         setMapType={setMapType}
         isRealtimeEnabled={isRealtimeEnabled}
         setIsRealtimeEnabled={setIsRealtimeEnabled}
-        trainsCount={trains.length}
+        // trainsCount={trains.length}
+        trainsCount={displayTrains.length}
         stationsCount={stations.length}
       />
 
@@ -261,7 +283,7 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
       )}
 
       {/* Real-time Status Indicator */}
-      <div className="absolute top-4 right-4 z-[1000]">
+      <div className="absolute top-4 right-4 z-[1000] space-y-2">
         <div className={cn(
           "flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm",
           isRealtimeEnabled 
@@ -274,6 +296,33 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
           )} />
           <span className="text-sm font-medium">
             {isRealtimeEnabled ? 'Live' : 'Paused'}
+          </span>
+        </div>
+        
+        {/* Data Source Selector */}
+        <div className="flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm bg-blue-100/90 dark:bg-blue-900/90 text-blue-800 dark:text-blue-200">
+          <div className={cn(
+            "w-2 h-2 rounded-full",
+            dataSource === 'real' ? "bg-red-500 animate-pulse" :
+            dataSource === 'mock' ? "bg-blue-500" :
+            "bg-purple-500"
+          )} />
+          <select 
+            value={dataSource}
+            onChange={(e) => setDataSource(e.target.value as 'mock' | 'real' | 'api')}
+            className="text-sm font-medium bg-transparent border-none focus:outline-none cursor-pointer"
+          >
+            <option value="real" className="text-gray-900">🚂 Real SBB Data</option>
+            <option value="mock" className="text-gray-900">🎭 Mock Movement</option>
+            <option value="api" className="text-gray-900">📡 API Approximation</option>
+          </select>
+        </div>
+        
+        {/* Train Count Indicator */}
+        <div className="flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm bg-purple-100/90 dark:bg-purple-900/90 text-purple-800 dark:text-purple-200">
+          <div className="w-2 h-2 rounded-full bg-purple-500" />
+          <span className="text-sm font-medium">
+            {displayTrains.length} Trains
           </span>
         </div>
       </div>
