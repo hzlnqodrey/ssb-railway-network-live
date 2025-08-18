@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query'
 
 interface WebSocketMessage {
   type: 'train_update' | 'station_update' | 'system_notification' | 'connection' | 'echo'
-  data?: any
+  data?: unknown
   message?: string
   timestamp: string
 }
@@ -21,6 +21,7 @@ interface UseWebSocketOptions {
   reconnectAttempts?: number
   reconnectInterval?: number
   heartbeatInterval?: number
+  skipInDevelopment?: boolean
 }
 
 interface WebSocketState {
@@ -36,11 +37,22 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     url = process.env.NODE_ENV === 'production' 
       ? 'wss://your-production-domain.com/ws'
       : 'ws://localhost:8000/ws',
-    enabled = true,
+    enabled = true, // Enabled by default as requested
     reconnectAttempts = 5,
     reconnectInterval = 5000,
-    heartbeatInterval = 30000
+    heartbeatInterval = 30000,
+    skipInDevelopment = false // Enable in development as requested
   } = options
+
+  // Don't attempt WebSocket connections in development unless explicitly enabled
+  const shouldConnect = enabled && !(process.env.NODE_ENV === 'development' && skipInDevelopment)
+
+  // Log WebSocket status in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && skipInDevelopment && enabled) {
+      console.info('ℹ️ WebSocket connections disabled in development mode. Set skipInDevelopment: false to enable.')
+    }
+  }, [enabled, skipInDevelopment])
 
   const queryClient = useQueryClient()
   const wsRef = useRef<WebSocket | null>(null)
@@ -99,26 +111,42 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
   }, [queryClient])
 
+  // Track connection attempts with a ref to avoid dependency loops
+  const connectionAttemptsRef = useRef(0)
+
   // Connect to WebSocket
   const connect = useCallback(() => {
-    if (!enabled || wsRef.current?.readyState === WebSocket.OPEN) {
+    if (!shouldConnect || wsRef.current?.readyState === WebSocket.OPEN) {
       return
     }
 
+    // Limit connection attempts to avoid spam
+    if (connectionAttemptsRef.current >= reconnectAttempts) {
+      console.warn('🚫 Max WebSocket connection attempts reached. Server may not be available.')
+      setState(prev => ({ 
+        ...prev, 
+        error: 'WebSocket server unavailable (max attempts reached)', 
+        isConnecting: false 
+      }))
+      return
+    }
+
+    connectionAttemptsRef.current += 1
     setState(prev => ({ 
       ...prev, 
       isConnecting: true, 
       error: null,
-      connectionAttempts: prev.connectionAttempts + 1
+      connectionAttempts: connectionAttemptsRef.current
     }))
 
     try {
-      console.log('🔌 Connecting to WebSocket:', url)
+      console.log(`🔌 Connecting to WebSocket (attempt ${connectionAttemptsRef.current}/${reconnectAttempts}):`, url)
       const ws = new WebSocket(url)
       wsRef.current = ws
 
       ws.onopen = () => {
         console.log('✅ WebSocket connected')
+        connectionAttemptsRef.current = 0
         setState(prev => ({ 
           ...prev, 
           isConnected: true, 
@@ -155,7 +183,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         }
 
         // Attempt reconnection if not manually closed
-        if (event.code !== 1000 && state.connectionAttempts < reconnectAttempts) {
+        if (event.code !== 1000 && connectionAttemptsRef.current < reconnectAttempts) {
           console.log(`🔄 Attempting reconnection in ${reconnectInterval}ms...`)
           reconnectTimeoutRef.current = setTimeout(() => {
             connect()
@@ -164,22 +192,35 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       }
 
       ws.onerror = (error) => {
-        console.error('❌ WebSocket error:', error)
+        // More informative error logging
+        const errorMessage = error instanceof ErrorEvent ? error.message : 'Connection refused'
+        console.warn('🔌 WebSocket connection failed:', {
+          url,
+          error: errorMessage,
+          readyState: ws.readyState,
+          attempts: connectionAttemptsRef.current
+        })
+        
         setState(prev => ({ 
           ...prev, 
-          error: 'WebSocket connection failed', 
+          error: `WebSocket connection failed: ${errorMessage || 'Server not available'}`, 
           isConnecting: false 
         }))
       }
     } catch (error) {
-      console.error('Failed to create WebSocket connection:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.warn('🚫 Failed to create WebSocket connection:', {
+        url,
+        error: errorMessage,
+        attempts: connectionAttemptsRef.current
+      })
       setState(prev => ({ 
         ...prev, 
-        error: 'Failed to create WebSocket connection', 
+        error: `Failed to create WebSocket connection: ${errorMessage}`, 
         isConnecting: false 
       }))
     }
-  }, [enabled, url, reconnectAttempts, reconnectInterval, heartbeatInterval, handleMessage, state.connectionAttempts])
+  }, [shouldConnect, url, reconnectAttempts, reconnectInterval, heartbeatInterval, handleMessage])
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
@@ -198,6 +239,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       heartbeatIntervalRef.current = null
     }
 
+    connectionAttemptsRef.current = 0
     setState({
       isConnected: false,
       isConnecting: false,
@@ -226,9 +268,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
   }, [])
 
-  // Connect on mount and when enabled changes
+  // Connect on mount and when shouldConnect changes
   useEffect(() => {
-    if (enabled) {
+    if (shouldConnect) {
       connect()
     } else {
       disconnect()
@@ -237,7 +279,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     return () => {
       disconnect()
     }
-  }, [enabled, connect, disconnect])
+  }, [shouldConnect, connect, disconnect])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -273,8 +315,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
  */
 export function useWebSocketSubscription(
   messageType: WebSocketMessage['type'],
-  callback: (data: any) => void,
-  dependencies: any[] = []
+  callback: (data: unknown) => void
 ) {
   const { lastMessage } = useWebSocket()
 
@@ -282,7 +323,7 @@ export function useWebSocketSubscription(
     if (lastMessage?.type === messageType && lastMessage.data) {
       callback(lastMessage.data)
     }
-  }, [lastMessage, messageType, callback, ...dependencies])
+  }, [lastMessage, messageType, callback])
 }
 
 /**

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Train, Station } from '@/types/railway'
+import { Train } from '@/types/railway'
 import { AnimatedTrainMarker } from './AnimatedTrainMarker'
 import { StationMarker } from './StationMarker'
 import { MapControls } from './MapControls'
@@ -14,7 +14,7 @@ import { useSwissRailwayData } from '@/hooks/useSwissRailwayData'
 import { cn } from '@/lib/utils'
 
 // Fix for default markers in Leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl: unknown })._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: '/leaflet/marker-icon-2x.png',
   iconUrl: '/leaflet/marker-icon.png',
@@ -29,79 +29,7 @@ interface SwissRailwayMapProps {
   className?: string
 }
 
-// Mock data for development - we'll replace this with real API calls
-const mockTrains: Train[] = [
-  {
-    id: 'IC-1-001',
-    name: 'IC 1',
-    category: 'IC',
-    number: '1',
-    operator: 'SBB',
-    to: 'St. Gallen',
-    position: { lat: 47.3769, lng: 8.5417 }, // Zurich
-    delay: 2,
-    cancelled: false,
-    speed: 85,
-    direction: 45,
-    lastUpdate: new Date().toISOString()
-  },
-  {
-    id: 'S-3-002',
-    name: 'S 3',
-    category: 'S',
-    number: '3',
-    operator: 'SBB',
-    to: 'Pfäffikon SZ',
-    position: { lat: 46.9481, lng: 7.4474 }, // Bern
-    delay: 0,
-    cancelled: false,
-    speed: 45,
-    direction: 120,
-    lastUpdate: new Date().toISOString()
-  },
-  {
-    id: 'RE-456-003',
-    name: 'RE 456',
-    category: 'RE',
-    number: '456',
-    operator: 'SBB',
-    to: 'Basel SBB',
-    position: { lat: 46.5197, lng: 6.6323 }, // Lausanne
-    delay: 5,
-    cancelled: false,
-    speed: 72,
-    direction: 280,
-    lastUpdate: new Date().toISOString()
-  }
-]
-
-const mockStations: Station[] = [
-  {
-    id: 'zurich-hb',
-    name: 'Zürich HB',
-    coordinate: { x: 8.5417, y: 47.3769 }
-  },
-  {
-    id: 'bern',
-    name: 'Bern',
-    coordinate: { x: 7.4474, y: 46.9481 }
-  },
-  {
-    id: 'geneva',
-    name: 'Genève',
-    coordinate: { x: 6.1432, y: 46.2044 }
-  },
-  {
-    id: 'basel',
-    name: 'Basel SBB',
-    coordinate: { x: 7.5893, y: 47.5479 }
-  },
-  {
-    id: 'lausanne',
-    name: 'Lausanne',
-    coordinate: { x: 6.6323, y: 46.5197 }
-  }
-]
+// Mock data moved to useSwissRailwayData hook for better organization
 
 // Map updater component to handle real-time updates
 function MapUpdater({ trains }: { trains: Train[] }) {
@@ -131,21 +59,16 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
   const [mapType, setMapType] = useState<'standard' | 'satellite' | 'terrain'>('standard')
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(true)
 
-  // Use our custom Swiss Railway data hook
+  // Use our custom Swiss Railway data hook with mock data
   const {
     stations,
     trains,
-    isLoading,
     stationsLoading,
     trainsLoading,
-    hasError,
-    apiStatus,
-    rateLimitInfo,
-    stats,
-    refreshAllData
+    hasError
   } = useSwissRailwayData({
     enableRealtime: isRealtimeEnabled,
-    realtimeInterval: 30000, // 30 seconds to respect rate limits
+    realtimeInterval: 5000, // 5 seconds for smooth mock train movement
     enableStations: showStations,
     enableTrains: showTrains,
     maxStations: 12
@@ -261,7 +184,7 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
       )}
 
       {/* Real-time Status Indicator */}
-      <div className="absolute top-4 right-4 z-[1000]">
+      <div className="absolute top-4 right-4 z-[1000] space-y-2">
         <div className={cn(
           "flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm",
           isRealtimeEnabled 
@@ -274,6 +197,14 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
           )} />
           <span className="text-sm font-medium">
             {isRealtimeEnabled ? 'Live' : 'Paused'}
+          </span>
+        </div>
+        
+        {/* Data Source Indicator */}
+        <div className="flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm bg-blue-100/90 dark:bg-blue-900/90 text-blue-800 dark:text-blue-200">
+          <div className="w-2 h-2 rounded-full bg-blue-500" />
+          <span className="text-sm font-medium">
+            🎭 Mock Mode
           </span>
         </div>
       </div>

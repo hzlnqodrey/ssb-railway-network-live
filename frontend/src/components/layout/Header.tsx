@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React from 'react'
 import { 
   Train, 
   Settings, 
@@ -24,12 +24,13 @@ interface HeaderProps {
 }
 
 export function Header({ className }: HeaderProps) {
-  // Get real connection and data status
-  const { isOnline, status: wsStatus, statusIcon } = useWebSocketStatus()
+  // Get real WebSocket connection status
+  const { isOnline, status: wsStatus } = useWebSocketStatus()
+  
   const { stats, apiStatus } = useSwissRailwayData({ 
     enableRealtime: true,
     enableStations: true,
-    enableTrains: true 
+    enableTrains: true
   })
   
   // Dark mode functionality
@@ -60,6 +61,7 @@ export function Header({ className }: HeaderProps) {
         <div className="hidden md:flex items-center space-x-6">
           {/* Connection Status */}
           <div className="flex items-center space-x-2">
+            {/* Show WebSocket connection status */}
             {wsStatus === 'connecting' ? (
               <Loader className="w-4 h-4 text-yellow-500 animate-spin" />
             ) : wsStatus === 'error' ? (
@@ -77,7 +79,7 @@ export function Header({ className }: HeaderProps) {
               "text-gray-600 dark:text-gray-400"
             )}>
               {wsStatus === 'connecting' ? 'Connecting' :
-               wsStatus === 'error' ? 'Error' :
+               wsStatus === 'error' ? 'Connection Failed' :
                isOnline ? 'Live' : 'Offline'}
             </span>
           </div>
