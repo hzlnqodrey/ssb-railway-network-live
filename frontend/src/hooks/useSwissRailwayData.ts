@@ -10,7 +10,7 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Train, Station, StationBoard } from '@/types/railway'
+import { Train, Station, StationBoard, TrainStop } from '@/types/railway'
 
 // Mock data for fallback when API is unavailable
 const mockStations: Station[] = [
@@ -43,8 +43,63 @@ const mockStations: Station[] = [
     id: 'st-gallen',
     name: 'St. Gallen',
     coordinate: { x: 9.3767, y: 47.4245 }
+  },
+  {
+    id: 'winterthur',
+    name: 'Winterthur',
+    coordinate: { x: 8.7233, y: 47.5022 }
+  },
+  {
+    id: 'olten',
+    name: 'Olten',
+    coordinate: { x: 7.9085, y: 47.3499 }
+  },
+  {
+    id: 'lucerne',
+    name: 'Luzern',
+    coordinate: { x: 8.3101, y: 47.0502 }
+  },
+  {
+    id: 'thun',
+    name: 'Thun',
+    coordinate: { x: 7.6281, y: 46.7581 }
+  },
+  {
+    id: 'interlaken-ost',
+    name: 'Interlaken Ost',
+    coordinate: { x: 7.8712, y: 46.6863 }
+  },
+  {
+    id: 'montreux',
+    name: 'Montreux',
+    coordinate: { x: 6.9116, y: 46.4312 }
+  },
+  {
+    id: 'neuchatel',
+    name: 'Neuchâtel',
+    coordinate: { x: 6.9311, y: 47.0008 }
+  },
+  {
+    id: 'chur',
+    name: 'Chur',
+    coordinate: { x: 9.5307, y: 46.8569 }
+  },
+  {
+    id: 'lugano',
+    name: 'Lugano',
+    coordinate: { x: 8.9463, y: 46.0037 }
+  },
+  {
+    id: 'sion',
+    name: 'Sion',
+    coordinate: { x: 7.3606, y: 46.2277 }
   }
 ]
+
+// Helper function to get station by ID
+const getStationById = (id: string): Station | undefined => {
+  return mockStations.find(station => station.id === id)
+}
 
 // Mock train routes with waypoints for realistic movement
 const mockTrainRoutes = {
@@ -85,7 +140,7 @@ function interpolate(start: { lat: number; lng: number }, end: { lat: number; ln
   }
 }
 
-// Function to calculate moving train positions
+// Function to calculate moving train positions with timetables
 function getMovingTrainPositions(): Train[] {
   const now = Date.now()
   const cycleDuration = 120000 // 2 minutes per full route cycle
@@ -97,13 +152,39 @@ function getMovingTrainPositions(): Train[] {
       category: 'IC',
       number: '1',
       operator: 'SBB',
+      from: 'Zürich HB',
       to: 'St. Gallen',
       position: getInterpolatedPosition('IC-1-001', now, cycleDuration),
       delay: Math.floor(Math.random() * 5),
       cancelled: false,
       speed: 85 + Math.floor(Math.random() * 20),
       direction: 45,
-      lastUpdate: new Date().toISOString()
+      lastUpdate: new Date().toISOString(),
+      departureTime: '08:32',
+      arrivalTime: '09:45',
+      timetable: [
+        {
+          station: getStationById('zurich-hb')!,
+          departureTime: '08:32',
+          platform: '3',
+          isPassed: true
+        },
+        {
+          station: getStationById('winterthur')!,
+          arrivalTime: '08:54',
+          departureTime: '08:56',
+          arrivalDelay: 2,
+          departureDelay: 2,
+          platform: '2',
+          isCurrentStation: true
+        },
+        {
+          station: getStationById('st-gallen')!,
+          arrivalTime: '09:45',
+          platform: '4',
+          isPassed: false
+        }
+      ]
     },
     {
       id: 'S-3-002',
@@ -111,13 +192,37 @@ function getMovingTrainPositions(): Train[] {
       category: 'S',
       number: '3',
       operator: 'SBB',
-      to: 'Pfäffikon SZ',
-      position: getInterpolatedPosition('S-3-002', now + 30000, cycleDuration), // Offset by 30 seconds
+      from: 'Zürich HB',
+      to: 'Luzern',
+      position: getInterpolatedPosition('S-3-002', now + 30000, cycleDuration),
       delay: Math.floor(Math.random() * 3),
       cancelled: false,
       speed: 45 + Math.floor(Math.random() * 15),
       direction: 120,
-      lastUpdate: new Date().toISOString()
+      lastUpdate: new Date().toISOString(),
+      departureTime: '09:15',
+      arrivalTime: '10:22',
+      timetable: [
+        {
+          station: getStationById('zurich-hb')!,
+          departureTime: '09:15',
+          platform: '31',
+          isPassed: true
+        },
+        {
+          station: getStationById('olten')!,
+          arrivalTime: '09:52',
+          departureTime: '09:54',
+          platform: '1',
+          isCurrentStation: true
+        },
+        {
+          station: getStationById('lucerne')!,
+          arrivalTime: '10:22',
+          platform: '2',
+          isPassed: false
+        }
+      ]
     },
     {
       id: 'RE-456-003',
@@ -125,13 +230,60 @@ function getMovingTrainPositions(): Train[] {
       category: 'RE',
       number: '456',
       operator: 'SBB',
+      from: 'Genève',
       to: 'Basel SBB',
-      position: getInterpolatedPosition('RE-456-003', now + 60000, cycleDuration), // Offset by 1 minute
+      position: getInterpolatedPosition('RE-456-003', now + 60000, cycleDuration),
       delay: Math.floor(Math.random() * 8),
       cancelled: false,
       speed: 72 + Math.floor(Math.random() * 18),
       direction: 280,
-      lastUpdate: new Date().toISOString()
+      lastUpdate: new Date().toISOString(),
+      departureTime: '07:42',
+      arrivalTime: '11:13',
+      timetable: [
+        {
+          station: getStationById('geneva')!,
+          departureTime: '07:42',
+          platform: '5',
+          isPassed: true
+        },
+        {
+          station: getStationById('lausanne')!,
+          arrivalTime: '08:33',
+          departureTime: '08:36',
+          platform: '2',
+          isPassed: true
+        },
+        {
+          station: getStationById('neuchatel')!,
+          arrivalTime: '09:18',
+          departureTime: '09:20',
+          platform: '3',
+          isPassed: true
+        },
+        {
+          station: getStationById('bern')!,
+          arrivalTime: '10:05',
+          departureTime: '10:08',
+          arrivalDelay: 5,
+          departureDelay: 5,
+          platform: '6',
+          isCurrentStation: true
+        },
+        {
+          station: getStationById('olten')!,
+          arrivalTime: '10:33',
+          departureTime: '10:35',
+          platform: '4',
+          isPassed: false
+        },
+        {
+          station: getStationById('basel')!,
+          arrivalTime: '11:13',
+          platform: '8',
+          isPassed: false
+        }
+      ]
     },
     {
       id: 'ICE-74-004',
@@ -139,13 +291,54 @@ function getMovingTrainPositions(): Train[] {
       category: 'ICE',
       number: '74',
       operator: 'DB',
-      to: 'Frankfurt',
-      position: getInterpolatedPosition('ICE-74-004', now + 90000, cycleDuration), // Offset by 1.5 minutes
+      from: 'Basel SBB',
+      to: 'Hamburg Hbf',
+      position: getInterpolatedPosition('ICE-74-004', now + 90000, cycleDuration),
       delay: Math.floor(Math.random() * 12),
       cancelled: false,
       speed: 95 + Math.floor(Math.random() * 25),
       direction: 15,
-      lastUpdate: new Date().toISOString()
+      lastUpdate: new Date().toISOString(),
+      departureTime: '06:57',
+      arrivalTime: '14:26',
+      timetable: [
+        {
+          station: getStationById('basel')!,
+          departureTime: '06:57',
+          platform: '3',
+          isPassed: true
+        },
+        {
+          station: getStationById('zurich-hb')!,
+          arrivalTime: '07:56',
+          departureTime: '08:02',
+          arrivalDelay: 8,
+          departureDelay: 8,
+          platform: '4',
+          isCurrentStation: true
+        },
+        {
+          station: {
+            id: 'frankfurt-hbf',
+            name: 'Frankfurt (Main) Hbf',
+            coordinate: { x: 8.6628, y: 50.1066 }
+          },
+          arrivalTime: '11:24',
+          departureTime: '11:26',
+          platform: '7',
+          isPassed: false
+        },
+        {
+          station: {
+            id: 'hamburg-hbf',
+            name: 'Hamburg Hbf',
+            coordinate: { x: 10.0067, y: 53.5528 }
+          },
+          arrivalTime: '14:26',
+          platform: '12',
+          isPassed: false
+        }
+      ]
     },
     {
       id: 'IR-15-005',
@@ -153,13 +346,62 @@ function getMovingTrainPositions(): Train[] {
       category: 'IR',
       number: '15',
       operator: 'SBB',
-      to: 'Bern',
-      position: getInterpolatedPosition('IR-15-005', now + 45000, cycleDuration), // Offset by 45 seconds
+      from: 'Genève Aéroport',
+      to: 'Chur',
+      position: getInterpolatedPosition('IR-15-005', now + 45000, cycleDuration),
       delay: Math.floor(Math.random() * 6),
       cancelled: false,
       speed: 68 + Math.floor(Math.random() * 22),
       direction: 90,
-      lastUpdate: new Date().toISOString()
+      lastUpdate: new Date().toISOString(),
+      departureTime: '11:04',
+      arrivalTime: '15:39',
+      timetable: [
+        {
+          station: {
+            id: 'geneva-airport',
+            name: 'Genève-Aéroport',
+            coordinate: { x: 6.1092, y: 46.2384 }
+          },
+          departureTime: '11:04',
+          platform: '1',
+          isPassed: true
+        },
+        {
+          station: getStationById('geneva')!,
+          arrivalTime: '11:11',
+          departureTime: '11:13',
+          platform: '3',
+          isPassed: true
+        },
+        {
+          station: getStationById('lausanne')!,
+          arrivalTime: '12:04',
+          departureTime: '12:07',
+          platform: '1',
+          isPassed: true
+        },
+        {
+          station: getStationById('bern')!,
+          arrivalTime: '13:25',
+          departureTime: '13:27',
+          platform: '2',
+          isCurrentStation: true
+        },
+        {
+          station: getStationById('zurich-hb')!,
+          arrivalTime: '14:27',
+          departureTime: '14:32',
+          platform: '13',
+          isPassed: false
+        },
+        {
+          station: getStationById('chur')!,
+          arrivalTime: '15:39',
+          platform: '3',
+          isPassed: false
+        }
+      ]
     }
   ]
 }

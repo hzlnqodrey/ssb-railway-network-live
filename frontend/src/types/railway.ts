@@ -53,6 +53,18 @@ export interface JourneyStop {
   realtimeAvailability?: string
 }
 
+export interface TrainStop {
+  station: Station
+  arrivalTime?: string // Format: "HH:MM"
+  departureTime?: string // Format: "HH:MM"
+  arrivalDelay?: number // Minutes
+  departureDelay?: number // Minutes
+  platform?: string
+  isCurrentStation?: boolean
+  isPassed?: boolean
+  isSkipped?: boolean
+}
+
 export interface Train {
   id: string
   name: string
@@ -61,6 +73,7 @@ export interface Train {
   line?: string
   operator: string
   to: string
+  from: string
   currentStation?: Station
   nextStation?: Station
   position?: {
@@ -76,6 +89,9 @@ export interface Train {
   speed?: number
   direction?: number // Direction in degrees
   lastUpdate: string // ISO date string
+  timetable?: TrainStop[] // Complete journey with all stops
+  departureTime?: string // Original departure time from first station
+  arrivalTime?: string // Expected arrival time at final destination
 }
 
 export interface MapSettings {
@@ -186,7 +202,7 @@ export interface AppConfig {
 export interface ApiError {
   code: string
   message: string
-  details?: any
+  details?: unknown
   timestamp: string
 }
 
@@ -194,7 +210,7 @@ export class SwissRailwayError extends Error {
   constructor(
     public code: string,
     message: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message)
     this.name = 'SwissRailwayError'

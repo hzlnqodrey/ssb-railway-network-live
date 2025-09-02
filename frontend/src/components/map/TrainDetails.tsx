@@ -36,7 +36,7 @@ export function TrainDetails({ train, onClose }: TrainDetailsProps) {
   ] as const
 
   return (
-    <div className="absolute top-4 left-4 z-[1000] w-80 max-h-[calc(100vh-2rem)] overflow-hidden">
+    <div className="absolute top-4 left-4 z-[1000] w-96 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-hidden">
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700">
         {/* Header */}
         <div 
@@ -115,9 +115,34 @@ export function TrainDetails({ train, onClose }: TrainDetailsProps) {
         </div>
 
         {/* Content */}
-        <div className="p-4 max-h-96 overflow-y-auto">
+        <div className="p-4 max-h-[28rem] overflow-y-auto">
           {activeTab === 'overview' && (
             <div className="space-y-4">
+              {/* Train Header */}
+              <div className="text-center border-b border-gray-200 dark:border-gray-700 pb-4">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {train.name} ({train.number})
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <span className="font-medium">Operator:</span> {train.operator}
+                </p>
+                {train.departureTime && train.from && (
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+                    Departing {train.from} at {train.departureTime}
+                  </p>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-2">
+                <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors">
+                  Follow
+                </button>
+                <button className="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors">
+                  Draw route
+                </button>
+              </div>
+
               {/* Basic Information */}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="space-y-1">
@@ -129,14 +154,14 @@ export function TrainDetails({ train, onClose }: TrainDetailsProps) {
                   <div className="font-medium">{train.number}</div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-gray-600 dark:text-gray-400">Operator</span>
+                  <span className="text-gray-600 dark:text-gray-400">From</span>
                   <div className="flex items-center space-x-1">
-                    <Building className="w-3 h-3" />
-                    <span className="font-medium">{train.operator}</span>
+                    <MapPin className="w-3 h-3" />
+                    <span className="font-medium">{train.from}</span>
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-gray-600 dark:text-gray-400">Destination</span>
+                  <span className="text-gray-600 dark:text-gray-400">To</span>
                   <div className="flex items-center space-x-1">
                     <MapPin className="w-3 h-3" />
                     <span className="font-medium">{train.to}</span>
@@ -215,55 +240,174 @@ export function TrainDetails({ train, onClose }: TrainDetailsProps) {
 
           {activeTab === 'route' && (
             <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900 dark:text-gray-100">Route Information</h4>
-              
-              {/* Current and Next Station */}
-              <div className="space-y-3">
-                {train.currentStation && (
-                  <div className="flex items-center space-x-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                      <MapPin className="w-4 h-4 text-white" />
+              {/* Train Header Information */}
+              <div className="border-b border-gray-200 dark:border-gray-700 pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">
+                      {train.name} - {train.operator}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {train.from} → {train.to}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium">
+                      Departing {train.from}
                     </div>
-                    <div>
-                      <div className="font-medium">Current Station</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {train.currentStation.name}
-                      </div>
+                    <div className="text-lg font-bold text-blue-600">
+                      {train.departureTime}
                     </div>
                   </div>
-                )}
-
-                {train.nextStation && (
-                  <div className="flex items-center space-x-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                      <ArrowRight className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Next Station</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {train.nextStation.name}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Final Destination */}
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Calendar className="w-4 h-4 text-gray-600" />
-                  <span className="font-medium">Final Destination</span>
-                </div>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  {train.to}
                 </div>
               </div>
 
-              {/* Route visualization could go here */}
-              <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                <Train className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Detailed route information coming soon</p>
-              </div>
+              {/* Timetable */}
+              {train.timetable && train.timetable.length > 0 ? (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100">Timetable</h4>
+                  
+                  {/* Table Header */}
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-t-lg p-2">
+                    <div className="grid grid-cols-12 gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      <div className="col-span-1">#</div>
+                      <div className="col-span-5">Station</div>
+                      <div className="col-span-3">Arr.</div>
+                      <div className="col-span-3">Dep.</div>
+                    </div>
+                  </div>
+                  
+                  {/* Table Body */}
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-b-lg overflow-hidden">
+                    {train.timetable.map((stop, index) => {
+                      const hasDelay = (stop.arrivalDelay && stop.arrivalDelay > 0) || (stop.departureDelay && stop.departureDelay > 0)
+                      
+                      return (
+                        <div 
+                          key={`${stop.station.id}-${index}`}
+                          className={cn(
+                            "grid grid-cols-12 gap-1 p-2 text-sm border-b border-gray-100 dark:border-gray-800 last:border-b-0",
+                            stop.isCurrentStation 
+                              ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800" 
+                              : stop.isPassed 
+                                ? "text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-800/50" 
+                                : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                          )}
+                        >
+                          {/* Station Number */}
+                          <div className="col-span-1 flex items-center">
+                            <span className={cn(
+                              "text-xs font-medium",
+                              stop.isCurrentStation ? "text-blue-600 dark:text-blue-400" : ""
+                            )}>
+                              {index + 1}.
+                            </span>
+                          </div>
+                          
+                          {/* Station Name */}
+                          <div className="col-span-5 flex items-center">
+                            <div>
+                              <div className={cn(
+                                "font-medium truncate",
+                                stop.isCurrentStation ? "text-blue-900 dark:text-blue-100" : "",
+                                stop.isPassed ? "line-through" : ""
+                              )}>
+                                {stop.station.name}
+                              </div>
+                              {stop.platform && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  Platform {stop.platform}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Arrival Time */}
+                          <div className="col-span-3 flex items-center">
+                            {stop.arrivalTime ? (
+                              <div className="text-center">
+                                <div className={cn(
+                                  "font-mono text-sm",
+                                  hasDelay && stop.arrivalDelay ? "text-red-600 dark:text-red-400" : ""
+                                )}>
+                                  {stop.arrivalTime}
+                                </div>
+                                {stop.arrivalDelay && stop.arrivalDelay > 0 && (
+                                  <div className="text-xs text-red-600 dark:text-red-400">
+                                    +{stop.arrivalDelay}'
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-xs">—</span>
+                            )}
+                          </div>
+                          
+                          {/* Departure Time */}
+                          <div className="col-span-3 flex items-center">
+                            {stop.departureTime ? (
+                              <div className="text-center">
+                                <div className={cn(
+                                  "font-mono text-sm",
+                                  hasDelay && stop.departureDelay ? "text-red-600 dark:text-red-400" : ""
+                                )}>
+                                  {stop.departureTime}
+                                </div>
+                                {stop.departureDelay && stop.departureDelay > 0 && (
+                                  <div className="text-xs text-red-600 dark:text-red-400">
+                                    +{stop.departureDelay}'
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-xs">—</span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                  <Train className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Timetable information not available</p>
+                </div>
+              )}
+
+              {/* Journey Summary */}
+              {train.departureTime && train.arrivalTime && (
+                <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <div>
+                      <span className="text-gray-600 dark:text-gray-400">Journey Duration:</span>
+                      <span className="ml-2 font-medium">
+                        {(() => {
+                          const [depHour, depMin] = train.departureTime.split(':').map(Number)
+                          const [arrHour, arrMin] = train.arrivalTime.split(':').map(Number)
+                          const depMinutes = depHour * 60 + depMin
+                          let arrMinutes = arrHour * 60 + arrMin
+                          
+                          // Handle next day arrivals
+                          if (arrMinutes < depMinutes) {
+                            arrMinutes += 24 * 60
+                          }
+                          
+                          const duration = arrMinutes - depMinutes
+                          const hours = Math.floor(duration / 60)
+                          const minutes = duration % 60
+                          
+                          return `${hours}h ${minutes}m`
+                        })()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600 dark:text-gray-400">Stops:</span>
+                      <span className="ml-2 font-medium">{train.timetable?.length || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

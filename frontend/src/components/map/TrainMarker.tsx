@@ -1,6 +1,6 @@
 'use client'
 
-import { Marker, Popup } from 'react-leaflet'
+import { Marker, Popup, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import { Train } from '@/types/railway'
 import { getTrainColor, formatDelay, formatSwissTime } from '@/lib/utils'
@@ -78,6 +78,28 @@ export function TrainMarker({ train, isSelected = false, onClick }: TrainMarkerP
         click: onClick
       }}
     >
+      {/* Hover Tooltip  */}
+      <Tooltip 
+        direction="top" 
+        offset={[0, -15]}
+        opacity={0.9}
+        className="train-tooltip"
+        permanent={false}
+      >
+        <div className="text-center">
+          <div className="font-bold text-sm">
+            {train.name} - {train.operator}
+          </div>
+          <div className="text-xs text-gray-600">
+            {train.departureTime && train.from ? 
+              `Departing ${train.from} at ${train.departureTime}` : 
+              `to ${train.to}`
+            }
+          </div>
+        </div>
+      </Tooltip>
+
+      {/* Detailed Popup on Click */}
       <Popup closeButton={false} className="train-popup">
         <div className="p-3 min-w-[250px]">
           {/* Train Header */}

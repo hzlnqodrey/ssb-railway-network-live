@@ -58,6 +58,7 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
   const [showTrains, setShowTrains] = useState(true)
   const [mapType, setMapType] = useState<'standard' | 'satellite' | 'terrain'>('standard')
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(true)
+  const [currentTime, setCurrentTime] = useState(new Date())
 
   // Use our custom Swiss Railway data hook with mock data
   const {
@@ -76,6 +77,15 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
 
   // Backwards compatibility for error handling
   const trainsError = hasError ? new Error('Failed to load railway data') : null
+
+  // Update current time every second for live clock display
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [])
 
   const getTileLayerUrl = useCallback(() => {
     switch (mapType) {
@@ -183,29 +193,55 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
         />
       )}
 
-      {/* Real-time Status Indicator */}
-      <div className="absolute top-4 right-4 z-[1000] space-y-2">
-        <div className={cn(
-          "flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm",
-          isRealtimeEnabled 
-            ? "bg-green-100/90 dark:bg-green-900/90 text-green-800 dark:text-green-200"
-            : "bg-gray-100/90 dark:bg-gray-900/90 text-gray-800 dark:text-gray-200"
-        )}>
+      {/* Time Display and Train Counter - Similar to Romanian Railways */}
+      <div className="absolute top-4 right-4 z-[1000]">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
+          {/* Current Time */}
+          <div className="text-2xl font-bold text-red-600 dark:text-red-400 font-mono">
+            {currentTime.toLocaleTimeString('de-CH', { 
+              hour12: false,
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            })}
+          </div>
+          
+          {/* Train Count */}
+          <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">
+            {trains.length} trains
+          </div>
+          
+          {/* Multiplier Controls */}
+          <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+            <span>multiply by </span>
+            <select className="bg-transparent border-none text-xs font-medium">
+              <option>1x</option>
+              <option>5x</option>
+              <option>10x</option>
+              <option>20x</option>
+              <option>50x</option>
+              <option>100x</option>
+            </select>
+          </div>
+
+          {/* Live Status */}
           <div className={cn(
-            "w-2 h-2 rounded-full",
-            isRealtimeEnabled ? "bg-green-500 animate-pulse" : "bg-gray-500"
-          )} />
-          <span className="text-sm font-medium">
-            {isRealtimeEnabled ? 'Live' : 'Paused'}
-          </span>
-        </div>
-        
-        {/* Data Source Indicator */}
-        <div className="flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm bg-blue-100/90 dark:bg-blue-900/90 text-blue-800 dark:text-blue-200">
-          <div className="w-2 h-2 rounded-full bg-blue-500" />
-          <span className="text-sm font-medium">
+            "flex items-center justify-center space-x-1 mt-3 px-2 py-1 rounded-full text-xs font-medium",
+            isRealtimeEnabled 
+              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+          )}>
+            <div className={cn(
+              "w-1.5 h-1.5 rounded-full",
+              isRealtimeEnabled ? "bg-green-500 animate-pulse" : "bg-gray-500"
+            )} />
+            <span>{isRealtimeEnabled ? 'Live' : 'Paused'}</span>
+          </div>
+
+          {/* Data Source */}
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
             🎭 Mock Mode
-          </span>
+          </div>
         </div>
       </div>
     </div>
