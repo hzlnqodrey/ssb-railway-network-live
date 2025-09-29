@@ -457,53 +457,65 @@ export function useSwissRailwayData(options: UseSwissRailwayDataOptions = {}) {
     })
   }, [])
 
-  // Fetch major Swiss railway stations (mock only)
+  // Fetch major Swiss railway stations from backend API
   const {
-    data: stations = [],
+    data: stationsResponse,
     isLoading: stationsLoading,
     error: stationsError,
     refetch: refetchStations
   } = useQuery({
-    queryKey: ['swiss-railway', 'stations', 'mock'],
-    queryFn: () => {
-      console.log('🎭 Loaded mock Swiss railway stations')
-      return mockStations.slice(0, maxStations)
+    queryKey: ['swiss-railway', 'stations', 'api'],
+    queryFn: async () => {
+      const response = await fetch(`http://localhost:8000/api/stations?limit=${maxStations}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch stations')
+      }
+      const data = await response.json()
+      console.log('📍 Loaded stations from Swiss GTFS API:', data.meta.count)
+      return data.data
     },
-    staleTime: Infinity, // Never refetch stations
-    gcTime: Infinity,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     enabled: enableStations,
-    retry: false
+    retry: 3
   })
+
+  const stations = stationsResponse || []
 
   // Track if trains have been initialized
   const [trainsInitialized, setTrainsInitialized] = useState(false)
 
-  // Fetch moving train positions (mock only)
+  // Fetch live train positions from backend API
   const {
-    data: trains = [],
+    data: trainsResponse,
     isLoading: trainsLoading,
     error: trainsError,
     refetch: refetchTrains
   } = useQuery({
-    queryKey: ['swiss-railway', 'trains', 'moving'], // Removed Date.now() to prevent infinite queries
-    queryFn: () => {
-      // Generate fresh train positions silently
-      const movingTrains = getMovingTrainPositions()
+    queryKey: ['swiss-railway', 'trains', 'live'],
+    queryFn: async () => {
+      const response = await fetch('http://localhost:8000/api/trains/live')
+      if (!response.ok) {
+        throw new Error('Failed to fetch trains')
+      }
+      const data = await response.json()
       
       // Log only once when trains are first initialized
-      if (!trainsInitialized && movingTrains.length > 0) {
-        console.log(`🚂 Mock train system started with ${movingTrains.length} trains`)
+      if (!trainsInitialized && data.data.length > 0) {
+        console.log(`🚂 Live train system connected with ${data.data.length} trains`)
         setTrainsInitialized(true)
       }
       
-      return movingTrains
+      return data.data
     },
     staleTime: 0, // Always fetch fresh positions
     gcTime: realtimeInterval * 2,
     refetchInterval: enableRealtime ? realtimeInterval : false,
     enabled: enableTrains && stations.length > 0,
-    retry: false
+    retry: 3
   })
+
+  const trains = trainsResponse || []
 
   // Mock station departures (disabled for now)
   const getStationDepartures = async (/* stationId: string */): Promise<StationBoard | null> => {

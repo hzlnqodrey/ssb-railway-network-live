@@ -1,0 +1,59 @@
+route_id,agency_id,route_short_name,route_long_name,route_type
+1,SBB,IC 1,IC 1: St. Gallen - Zürich HB - Bern - Lausanne - Genève,2
+2,SBB,IC 2,IC 2: Basel SBB - Bern - Montreux,2
+3,SBB,IC 5,IC 5: Romanshorn - St. Gallen - Zürich HB - Bern - Lausanne - Genève,2
+4,SBB,IC 6,IC 6: Basel SBB - Olten - Bern - Fribourg - Lausanne,2
+5,SBB,IC 8,IC 8: Romanshorn - Zürich HB - Bern - Interlaken Ost,2
+6,SBB,IC 21,IC 21: Basel SBB - Zürich HB - Chur,2
+7,SBB,IC 51,IC 51: Zürich HB - Luzern - Lugano,2
+8,SBB,IC 61,IC 61: Basel SBB - Zürich HB - St. Gallen,2
+9,SBB,IR 13,IR 13: Zürich HB - Bern - Biel/Bienne - Neuchâtel,2
+10,SBB,IR 15,IR 15: Genève-Aéroport - Lausanne - Bern - Zürich HB - Chur,2
+11,SBB,IR 16,IR 16: Zürich HB - Winterthur - St. Gallen - Chur,2
+12,SBB,IR 17,IR 17: Basel SBB - Olten - Luzern,2
+13,SBB,IR 26,IR 26: Basel SBB - Delémont - Biel/Bienne,2
+14,SBB,IR 27,IR 27: Lausanne - Neuchâtel - Biel/Bienne - Basel SBB,2
+15,SBB,IR 36,IR 36: Zürich HB - Luzern - Interlaken Ost,2
+16,SBB,IR 37,IR 37: Basel SBB - Olten - Luzern - Interlaken Ost,2
+17,SBB,IR 46,IR 46: Zürich HB - Baden - Aarau - Olten - Bern,2
+18,SBB,IR 75,IR 75: Zürich HB - Luzern - Locarno,2
+19,SBB,IR 90,IR 90: Zürich HB - St. Gallen - Chur,2
+20,SBB,RE,RE: Regional Express Various Routes,2
+21,ZVV,S1,S1: Zürich HB - Winterthur - Wil SG,2
+22,ZVV,S2,S2: Zürich Flughafen - Zürich HB - Zug,2
+23,ZVV,S3,S3: Zürich HB - Lenzburg - Aarau,2
+24,ZVV,S4,S4: Zürich HB - Langnau-Gattikon - Baar,2
+25,ZVV,S5,S5: Zürich HB - Pfäffikon SZ,2
+26,ZVV,S6,S6: Zürich HB - Baden,2
+27,ZVV,S7,S7: Zürich HB - Rapperswil,2
+28,ZVV,S8,S8: Zürich HB - Pfäffikon SZ - Lachen,2
+29,ZVV,S9,S9: Zürich HB - Uster - Schaffhausen,2
+30,ZVV,S10,S10: Zürich HB - Winterthur,2
+31,ZVV,S11,S11: Zürich HB - Winterthur - Schaffhausen,2
+32,ZVV,S12,S12: Zürich HB - Seuzach - Schaffhausen,2
+33,ZVV,S14,S14: Zürich HB - Hinwil,2
+34,ZVV,S15,S15: Zürich HB - Rapperswil - Pfäffikon SZ,2
+35,ZVV,S16,S16: Zürich HB - Thayngen,2
+36,ZVV,S18,S18: Zürich HB - Eglisau - Schaffhausen,2
+37,ZVV,S21,S21: Zürich HB - Aarau,2
+38,ZVV,S24,S24: Zürich HB - Zug - Luzern,2
+39,BLS,S3,S3: Bern - Belp - Thun,2
+40,BLS,S4,S4: Bern - Langnau i.E.,2
+41,BLS,S5,S5: Bern - Schwarzenburg,2
+42,BLS,S6,S6: Bern - Worb Dorf,2
+43,BLS,S7,S7: Bern - Worblaufen - Bolligen,2
+44,BLS,S8,S8: Bern - Laupen,2
+45,RhB,R1,R1: Chur - Arosa,2
+46,RhB,R11,R11: Chur - St. Moritz,2
+47,RhB,R12,R12: Chur - Disentis/Mustér,2
+48,RhB,R13,R13: Landquart - Davos Platz,2
+49,RhB,R14,R14: Samedan - Pontresina - Tirano,2
+50,DB,ICE 73,ICE 73: Zürich HB - Stuttgart - Frankfurt - Hamburg,2
+51,DB,ICE 74,ICE 74: Hamburg - Frankfurt - Stuttgart - Zürich HB,2
+52,DB,ICE 75,ICE 75: Zürich HB - Frankfurt - Berlin,2
+53,DB,EC 6,EC 6: Zürich HB - München,2
+54,DB,EC 88,EC 88: München - Zürich HB,2
+55,SNCF,TGV 9201,TGV 9201: Paris - Lyon - Genève,2
+56,SNCF,TGV 9211,TGV 9211: Genève - Lyon - Paris,2
+57,ÖBB,EC 85,EC 85: Zürich HB - Innsbruck - Wien,2
+58,ÖBB,EN 40463,EN 40463: Zürich HB - Wien - Budapest,2

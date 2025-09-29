@@ -1,0 +1,11 @@
+agency_id,agency_name,agency_url,agency_timezone
+SBB,Schweizerische Bundesbahnen SBB,https://www.sbb.ch,Europe/Zurich
+BLS,BLS AG,https://www.bls.ch,Europe/Zurich
+RhB,Rhätische Bahn,https://www.rhb.ch,Europe/Zurich
+SOB,Südostbahn,https://www.sob.ch,Europe/Zurich
+THURBO,Thurbo,https://www.thurbo.ch,Europe/Zurich
+TPG,Transports publics genevois,https://www.tpg.ch,Europe/Zurich
+ZVV,Zürcher Verkehrsverbund,https://www.zvv.ch,Europe/Zurich
+DB,Deutsche Bahn AG,https://www.db.de,Europe/Zurich
+SNCF,SNCF Connect,https://www.sncf-connect.com,Europe/Zurich
+ÖBB,Österreichische Bundesbahnen,https://www.oebb.at,Europe/Zurich
