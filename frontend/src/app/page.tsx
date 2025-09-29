@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import dynamic from 'next/dynamic'
@@ -30,17 +30,26 @@ const queryClient = new QueryClient({
 })
 
 export default function Home() {
+  const [expandMapControls, setExpandMapControls] = useState(false)
+
+  const handleSettingsClick = () => {
+    console.log('⚙️ Settings clicked, expanding map controls')
+    setExpandMapControls(true)
+    // Auto-collapse after 5 seconds
+    setTimeout(() => setExpandMapControls(false), 5000)
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <div className="flex flex-col h-screen bg-background text-foreground">
         {/* Header */}
-        <Header />
+        <Header onSettingsClick={handleSettingsClick} />
         
         {/* Main Map Container */}
         <main className="flex-1 relative overflow-hidden">
           <ErrorBoundary>
             <Suspense fallback={<LoadingSpinner text="Initializing Railway Network..." />}>
-              <SwissRailwayMap />
+              <SwissRailwayMap forceExpandControls={expandMapControls} />
             </Suspense>
           </ErrorBoundary>
         </main>

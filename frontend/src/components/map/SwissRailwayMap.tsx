@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Train } from '@/types/railway'
+import { Train, Station } from '@/types/railway'
 import { AnimatedTrainMarker } from './AnimatedTrainMarker'
 import { StationMarker } from './StationMarker'
 import { MapControls } from './MapControls'
@@ -27,6 +27,7 @@ const DEFAULT_ZOOM = 8
 
 interface SwissRailwayMapProps {
   className?: string
+  forceExpandControls?: boolean
 }
 
 // Mock data moved to useSwissRailwayData hook for better organization
@@ -52,13 +53,14 @@ function MapUpdater({ trains }: { trains: Train[] }) {
   return null
 }
 
-export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
+export default function SwissRailwayMap({ className, forceExpandControls = false }: SwissRailwayMapProps) {
   const [selectedTrain, setSelectedTrain] = useState<Train | null>(null)
   const [showStations, setShowStations] = useState(true)
   const [showTrains, setShowTrains] = useState(true)
-  const [mapType, setMapType] = useState<'standard' | 'satellite' | 'terrain'>('standard')
+  const [mapType, setMapType] = useState<'standard' | 'satellite' | 'terrain' | 'dark'>('standard')
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
+  
 
   // Use our custom Swiss Railway data hook with mock data
   const {
@@ -88,12 +90,16 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
   }, [])
 
   const getTileLayerUrl = useCallback(() => {
+    console.log('🗺️ Getting tile URL for map type:', mapType)
+    
     switch (mapType) {
       case 'satellite':
         return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
       case 'terrain':
         return 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
-      default:
+      case 'dark':
+        return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+      default: // standard
         return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
     }
   }, [mapType])
@@ -104,7 +110,9 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
         return '&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
       case 'terrain':
         return 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-      default:
+      case 'dark':
+        return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      default: // standard
         return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }
   }, [mapType])
@@ -122,6 +130,7 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
 
   return (
     <div className={cn("relative h-full w-full", className)}>
+
       {/* Loading Overlay */}
       {(trainsLoading || stationsLoading) && (
         <div className="absolute inset-0 z-[1000] bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
@@ -140,7 +149,7 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
         className="h-full w-full z-0"
         zoomControl={false}
       >
-        {/* Tile Layer */}
+        {/* Tile Layer - Different providers based on map type */}
         <TileLayer
           url={getTileLayerUrl()}
           attribution={getTileLayerAttribution()}
@@ -151,7 +160,7 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
         <MapUpdater trains={trains} />
 
         {/* Station Markers */}
-        {showStations && stations.map((station) => (
+        {showStations && stations.map((station: Station) => (
           <StationMarker
             key={station.id}
             station={station}
@@ -160,7 +169,7 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
         ))}
 
         {/* Animated Train Markers */}
-        {showTrains && trains.map((train) => (
+        {showTrains && trains.map((train: Train) => (
           <AnimatedTrainMarker
             key={train.id}
             train={train}
@@ -183,6 +192,7 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
         setIsRealtimeEnabled={setIsRealtimeEnabled}
         trainsCount={trains.length}
         stationsCount={stations.length}
+        forceExpanded={forceExpandControls}
       />
 
       {/* Train Details Panel */}
@@ -243,6 +253,7 @@ export default function SwissRailwayMap({ className }: SwissRailwayMapProps) {
             🇨🇭 Swiss GTFS
           </div>
         </div>
+
       </div>
     </div>
   )

@@ -21,9 +21,10 @@ import { useDarkMode } from '@/hooks/useDarkMode'
 
 interface HeaderProps {
   className?: string
+  onSettingsClick?: () => void
 }
 
-export function Header({ className }: HeaderProps) {
+export function Header({ className, onSettingsClick }: HeaderProps) {
   // Get real WebSocket connection status
   const { isOnline, status: wsStatus } = useWebSocketStatus()
   
@@ -148,6 +149,7 @@ export function Header({ className }: HeaderProps) {
 
           {/* Settings */}
           <button
+            onClick={onSettingsClick}
             className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             aria-label="Settings"
           >

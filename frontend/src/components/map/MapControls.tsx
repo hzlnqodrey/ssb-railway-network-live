@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Train, 
   MapPin, 
@@ -13,7 +13,9 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
-  EyeOff
+  EyeOff,
+  Moon,
+  Sun
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,12 +24,13 @@ interface MapControlsProps {
   setShowStations: (show: boolean) => void
   showTrains: boolean
   setShowTrains: (show: boolean) => void
-  mapType: 'standard' | 'satellite' | 'terrain'
-  setMapType: (type: 'standard' | 'satellite' | 'terrain') => void
+  mapType: 'standard' | 'satellite' | 'terrain' | 'dark'
+  setMapType: (type: 'standard' | 'satellite' | 'terrain' | 'dark') => void
   isRealtimeEnabled: boolean
   setIsRealtimeEnabled: (enabled: boolean) => void
   trainsCount: number
   stationsCount: number
+  forceExpanded?: boolean
 }
 
 export function MapControls({
@@ -40,14 +43,23 @@ export function MapControls({
   isRealtimeEnabled,
   setIsRealtimeEnabled,
   trainsCount,
-  stationsCount
+  stationsCount,
+  forceExpanded = false
 }: MapControlsProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  
+  // Update expanded state when forceExpanded changes
+  useEffect(() => {
+    if (forceExpanded) {
+      setIsExpanded(true)
+    }
+  }, [forceExpanded])
 
   const mapTypeOptions = [
     { value: 'standard', label: 'Standard', icon: Map },
     { value: 'satellite', label: 'Satellite', icon: Satellite },
-    { value: 'terrain', label: 'Terrain', icon: Mountain }
+    { value: 'terrain', label: 'Terrain', icon: Mountain },
+    { value: 'dark', label: 'Dark', icon: Moon }
   ] as const
 
   return (
@@ -175,6 +187,45 @@ export function MapControls({
                   )
                 })}
               </div>
+            </div>
+
+            {/* Map Theme Toggle */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                Map Theme
+              </h4>
+              
+              <button
+                onClick={() => {
+                  const newMapType = mapType === 'dark' ? 'standard' : 'dark'
+                  console.log('🗺️ Map theme toggle:', mapType, '→', newMapType)
+                  setMapType(newMapType)
+                }}
+                className={cn(
+                  "w-full flex items-center justify-between p-2 rounded-lg transition-colors",
+                  "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                )}
+              >
+                <div className="flex items-center space-x-2">
+                  {mapType === 'dark' ? (
+                    <Moon className="w-4 h-4 text-blue-500" />
+                  ) : (
+                    <Sun className="w-4 h-4 text-yellow-500" />
+                  )}
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {mapType === 'dark' ? 'Dark Map' : 'Light Map'}
+                  </span>
+                </div>
+                <div className={cn(
+                  "w-8 h-4 rounded-full relative transition-colors",
+                  mapType === 'dark' ? "bg-blue-500" : "bg-gray-300"
+                )}>
+                  <div className={cn(
+                    "w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform",
+                    mapType === 'dark' ? "translate-x-4" : "translate-x-0.5"
+                  )} />
+                </div>
+              </button>
             </div>
 
             {/* Statistics */}
