@@ -1,0 +1,93 @@
+fuzzy_agency_matching:
+    # filename-parts: "agency_id"
+    
+    # s.c.-astra-trans-carpatic-s.r.l-19-trenuri_2022.xml
+    astra-trans-carpatic: "200000" # Astra doesnt have "Operator" set
+
+agency_mapping:
+    -
+        agency_id: 6100826
+        agency_name: CFR Călători
+        agency_url: http://www.cfrcalatori.ro/
+        agency_timezone: Europe/Bucharest
+    -   
+        agency_id: 200000
+        agency_name: Astra Trans Carpatic
+        agency_url: https://www.astratranscarpatic.ro
+        agency_timezone: Europe/Bucharest
+    -   
+        agency_id: 906090
+        agency_name: Calea Ferată din Moldova
+        agency_url: http://www.railway.md
+        agency_timezone: Europe/Bucharest
+    - 
+        agency_id: 236037
+        agency_name: Interregional Calatori
+        agency_url: http://www.viaterraspedition.ro/
+        agency_timezone: Europe/Bucharest
+    -   
+        agency_id: 227098
+        agency_name: Regio Călători
+        agency_url: http://www.regiotrans.ro/
+        agency_timezone: Europe/Bucharest
+    -
+        agency_id: 236025
+        agency_name: Softrans
+        agency_url: http://softrans.ro/
+        agency_timezone: Europe/Bucharest
+    -
+        agency_id: 228389
+        agency_name: Transferoviar Calatori
+        agency_url: http://www.transferoviarcalatori.ro/
+        agency_timezone: Europe/Bucharest
+
+gtfs_files:
+    agency:
+        - agency_id
+        - agency_name
+        - agency_url
+        - agency_timezone
+
+    calendar:
+        - service_id
+        - monday
+        - tuesday
+        - wednesday
+        - thursday
+        - friday
+        - saturday
+        - sunday
+        - start_date
+        - end_date
+
+    calendar_dates:
+        - service_id
+        - date
+        - exception_type
+    
+    routes:
+        - route_id
+        - agency_id
+        - route_short_name
+        - route_long_name
+        - route_type
+    
+    stops:
+        - stop_id
+        - stop_name
+        - stop_lat
+        - stop_lon
+    
+    stop_times:
+        - trip_id
+        - arrival_time
+        - departure_time
+        - stop_id
+        - stop_sequence
+    
+    trips:
+        - route_id
+        - service_id
+        - trip_id
+        - trip_short_name
+    
