@@ -91,16 +91,32 @@ func (h *Hub) Run() {
 			log.Info().Int("clients", len(h.clients)).Msg("WebSocket client disconnected")
 
 		case message := <-h.broadcast:
+			// Collect failed clients under read lock, delete under write lock
 			h.mu.RLock()
+			var failedClients []*Client
 			for client := range h.clients {
 				select {
 				case client.send <- message:
+					// Message sent successfully
 				default:
-					close(client.send)
-					delete(h.clients, client)
+					// Client's send buffer is full, mark for removal
+					failedClients = append(failedClients, client)
 				}
 			}
 			h.mu.RUnlock()
+
+			// Remove failed clients under write lock
+			if len(failedClients) > 0 {
+				h.mu.Lock()
+				for _, client := range failedClients {
+					if _, ok := h.clients[client]; ok {
+						close(client.send)
+						delete(h.clients, client)
+					}
+				}
+				h.mu.Unlock()
+				log.Debug().Int("removed", len(failedClients)).Msg("Removed unresponsive clients")
+			}
 
 		case <-ticker.C:
 			// Broadcast live train data periodically
