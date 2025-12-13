@@ -12,6 +12,9 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Train, Station, StationBoard, TrainStop } from '@/types/railway'
 
+// API Base URL - Change to 8080 for Go backend, 8000 for Node.js backend
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+
 // Mock data for fallback when API is unavailable
 const mockStations: Station[] = [
   {
@@ -466,12 +469,12 @@ export function useSwissRailwayData(options: UseSwissRailwayDataOptions = {}) {
   } = useQuery({
     queryKey: ['swiss-railway', 'stations', 'api'],
     queryFn: async () => {
-      const response = await fetch(`http://localhost:8000/api/stations?limit=${maxStations}`)
+      const response = await fetch(`${API_BASE_URL}/api/stations?limit=${maxStations}`)
       if (!response.ok) {
         throw new Error('Failed to fetch stations')
       }
       const data = await response.json()
-      console.log('📍 Loaded stations from Swiss GTFS API:', data.meta.count)
+      console.log('📍 Loaded stations from Swiss GTFS API:', data.meta?.count || data.data?.length)
       return data.data
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -494,7 +497,7 @@ export function useSwissRailwayData(options: UseSwissRailwayDataOptions = {}) {
   } = useQuery({
     queryKey: ['swiss-railway', 'trains', 'live'],
     queryFn: async () => {
-      const response = await fetch('http://localhost:8000/api/trains/live')
+      const response = await fetch(`${API_BASE_URL}/api/trains/live`)
       if (!response.ok) {
         throw new Error('Failed to fetch trains')
       }

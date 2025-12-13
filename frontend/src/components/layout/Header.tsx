@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { 
   Train, 
   Settings, 
@@ -12,7 +13,8 @@ import {
   Zap,
   AlertCircle,
   CheckCircle,
-  Loader
+  Loader,
+  Info
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWebSocketStatus } from '@/hooks/useWebSocket'
@@ -122,6 +124,15 @@ export function Header({ className, onSettingsClick }: HeaderProps) {
 
         {/* Controls */}
         <div className="flex items-center space-x-2">
+          {/* About Link */}
+          <Link
+            href="/about"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            <Info className="w-4 h-4" />
+            <span>About</span>
+          </Link>
+
           {/* Speed Control */}
           <div className="hidden sm:flex items-center space-x-2 px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
             <span className="text-xs text-gray-600 dark:text-gray-400">Speed:</span>
