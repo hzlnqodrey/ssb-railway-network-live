@@ -55,6 +55,7 @@ export function useDarkMode() {
     
     setTheme(initialTheme)
     applyTheme(initialTheme)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Listen for system preference changes
@@ -71,6 +72,7 @@ export function useDarkMode() {
 
     mediaQuery.addEventListener('change', handleChange)
     return () => mediaQuery.removeEventListener('change', handleChange)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme])
 
   // Change theme

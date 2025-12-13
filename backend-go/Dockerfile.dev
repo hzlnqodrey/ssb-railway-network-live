@@ -1,0 +1,52 @@
+# Development Dockerfile for Swiss Railway Go Backend
+FROM golang:1.22-alpine AS development
+
+# Install git and ca-certificates (needed for go mod download)
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum* ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server
+
+# Expose port
+EXPOSE 8080
+
+# Run with hot reload using air (for development)
+# Install air for hot reload
+RUN go install github.com/air-verse/air@latest
+
+# Default command
+CMD ["air", "-c", ".air.toml"]
+
+# Production build stage
+FROM alpine:3.19 AS production
+
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+
+# Copy binary from build stage
+COPY --from=development /app/server /app/server
+
+# Copy data directory
+COPY --from=development /app/../data-swiss/gtfs-out /app/data
+
+# Create non-root user
+RUN adduser -D -g '' appuser
+USER appuser
+
+EXPOSE 8080
+
+CMD ["/app/server"]
+

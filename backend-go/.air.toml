@@ -1,0 +1,57 @@
+# Air configuration for hot reloading
+# https://github.com/air-verse/air
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+# Binary output path
+bin = "./tmp/main"
+# Build command
+cmd = "go build -o ./tmp/main ./cmd/server"
+# Watch file extensions
+include_ext = ["go", "tpl", "tmpl", "html"]
+# Exclude directories
+exclude_dir = ["tmp", "vendor", "testdata", "node_modules"]
+# Include directories
+include_dir = []
+# Exclude file patterns
+exclude_file = []
+# Exclude regex patterns
+exclude_regex = ["_test.go"]
+# Exclude unchanged files
+exclude_unchanged = false
+# Follow symlinks
+follow_symlink = false
+# Log file path
+log = "build-errors.log"
+# Send interrupt signal before killing
+send_interrupt = false
+# Signal to send when stopping
+stop_signal = "SIGTERM"
+# Delay after changes (milliseconds)
+delay = 1000
+# Kill delay
+kill_delay = "2s"
+# Rerun after exit
+rerun = false
+# Rerun delay
+rerun_delay = 500
+
+[log]
+# Show time in logs
+time = false
+# Main log only
+main_only = false
+
+[color]
+# App colors
+main = "magenta"
+watcher = "cyan"
+build = "yellow"
+runner = "green"
+
+[misc]
+# Delete tmp dir on exit
+clean_on_exit = true
+

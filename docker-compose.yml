@@ -17,23 +17,50 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
     env_file:
       - ./frontend/.env.local
     depends_on:
-      - backend
+      - backend-go
     networks:
       - swiss-railway-network
     restart: unless-stopped
     stdin_open: true
     tty: true
 
-  # Backend - Node.js API Server (Future Implementation)
-  backend:
+  # Backend - Go API Server (Primary)
+  backend-go:
+    build:
+      context: ./backend-go
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: swiss-railway-backend-go
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend-go:/app
+      - ./data-swiss/gtfs-out:/app/data
+    environment:
+      - ENVIRONMENT=development
+      - PORT=8080
+      - FRONTEND_URL=http://localhost:3000
+      - GTFS_DATA_PATH=/app/data
+      - LOG_LEVEL=debug
+      - ENABLE_SWISS_API=true
+      - WS_UPDATE_INTERVAL=5
+    networks:
+      - swiss-railway-network
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # Backend - Node.js API Server (Legacy, for reference)
+  backend-node:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
       target: development
-    container_name: swiss-railway-backend
+    container_name: swiss-railway-backend-node
     ports:
       - "8000:8000"
     volumes:
@@ -49,6 +76,8 @@ services:
     restart: unless-stopped
     stdin_open: true
     tty: true
+    profiles:
+      - legacy
 
   # Redis for caching (Optional for advanced features)
   redis:
