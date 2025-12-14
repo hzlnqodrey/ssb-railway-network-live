@@ -114,25 +114,48 @@ func main() {
 	log.Info().Msg("✅ Server exited gracefully")
 }
 
-// setupLogging configures zerolog.
+// setupLogging configures zerolog with JSON or console format.
 func setupLogging(cfg *config.Config) {
-	// Pretty logging for development
-	if cfg.IsDevelopment() {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.Kitchen})
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	// Set timestamp format for JSON logs
+	zerolog.TimeFieldFormat = time.RFC3339Nano
+
+	// Configure log format based on LOG_FORMAT env var
+	// Supports: "json" (default, structured), "console" (pretty, for development)
+	switch cfg.LogFormat {
+	case "console", "pretty":
+		// Pretty console output for development
+		log.Logger = log.Output(zerolog.ConsoleWriter{
+			Out:        os.Stdout,
+			TimeFormat: time.RFC3339,
+			NoColor:    false,
+		})
+	default:
+		// JSON format (default) - structured logging for production/log aggregation
+		log.Logger = zerolog.New(os.Stdout).With().
+			Timestamp().
+			Str("service", "swiss-railway-api").
+			Str("environment", cfg.Environment).
+			Logger()
 	}
 
 	// Set log level from config
 	switch cfg.LogLevel {
 	case "debug":
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "info":
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	case "warn":
 		zerolog.SetGlobalLevel(zerolog.WarnLevel)
 	case "error":
 		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
+
+	log.Debug().
+		Str("format", cfg.LogFormat).
+		Str("level", cfg.LogLevel).
+		Msg("Logging configured")
 }
 
 // setupRouter creates and configures the HTTP router.

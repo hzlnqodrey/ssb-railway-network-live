@@ -15,6 +15,7 @@ type Config struct {
 	FrontendURL          string
 	GTFSDataPath         string
 	LogLevel             string
+	LogFormat            string // "json" or "console" (pretty)
 	SwissTransportAPIURL string
 	EnableSwissAPI       bool
 	WSUpdateInterval     int // seconds
@@ -31,6 +32,7 @@ func Load() *Config {
 		FrontendURL:          getEnv("FRONTEND_URL", "http://localhost:3000"),
 		GTFSDataPath:         getEnv("GTFS_DATA_PATH", "../data-swiss/gtfs-out"),
 		LogLevel:             getEnv("LOG_LEVEL", "info"),
+		LogFormat:            getEnv("LOG_FORMAT", "json"), // Default to JSON format for structured logging
 		SwissTransportAPIURL: getEnv("SWISS_TRANSPORT_API_URL", "https://transport.opendata.ch/v1"),
 		EnableSwissAPI:       getEnvBool("ENABLE_SWISS_API", true),
 		WSUpdateInterval:     getEnvInt("WS_UPDATE_INTERVAL", 5),

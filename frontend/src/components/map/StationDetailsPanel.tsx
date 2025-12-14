@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   X, 
   Train, 
@@ -27,6 +27,17 @@ interface Departure {
   delay?: number
 }
 
+// Format departure time from HH:MM:SS to HH:MM
+function formatDepartureTime(time: string): string {
+  if (!time) return ''
+  // Handle both HH:MM:SS and HH:MM formats
+  const parts = time.split(':')
+  if (parts.length >= 2) {
+    return `${parts[0]}:${parts[1]}`
+  }
+  return time
+}
+
 interface StationDetailsPanelProps {
   station: Station
   onClose: () => void
@@ -44,7 +55,7 @@ export function StationDetailsPanel({ station, onClose, onTrainClick }: StationD
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
 
   // Fetch departures from API
-  const fetchDepartures = async () => {
+  const fetchDepartures = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     
@@ -58,25 +69,26 @@ export function StationDetailsPanel({ station, onClose, onTrainClick }: StationD
       const data = await response.json()
       
       // Transform API response to our Departure interface
+      // API returns: tripId, routeName, routeLongName, headsign, operator, departureTime, arrivalTime, sequence
       const transformedDepartures: Departure[] = (data.data?.departures || []).map((dep: {
-        trip_id?: string
-        train_name?: string
-        train_number?: string
-        route_short_name?: string
-        category?: string
-        agency_name?: string
+        tripId?: string
+        routeName?: string
+        routeLongName?: string
         headsign?: string
+        operator?: string
         departureTime?: string
+        arrivalTime?: string
+        sequence?: number
         platform?: string
         delay?: number
       }) => ({
-        id: dep.trip_id || `${dep.train_number}-${dep.departureTime}`,
-        trainName: dep.train_name || `${dep.route_short_name || ''} ${dep.train_number || ''}`.trim(),
-        trainNumber: dep.train_number || '',
-        category: dep.category || dep.route_short_name || 'Train',
-        operator: dep.agency_name || 'SBB',
-        destination: dep.headsign || 'Unknown',
-        departureTime: dep.departureTime || '',
+        id: dep.tripId || `train-${dep.departureTime}`,
+        trainName: dep.routeName || 'Train',
+        trainNumber: dep.tripId?.split('_')[1] || '',
+        category: dep.routeName || 'Train',
+        operator: dep.operator || 'SBB',
+        destination: dep.headsign || dep.routeLongName || dep.routeName || 'See timetable',
+        departureTime: formatDepartureTime(dep.departureTime || ''),
         platform: dep.platform,
         delay: dep.delay || 0
       }))
@@ -89,18 +101,18 @@ export function StationDetailsPanel({ station, onClose, onTrainClick }: StationD
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [station.id])
 
   // Fetch departures on mount and station change
   useEffect(() => {
     fetchDepartures()
-  }, [station.id])
+  }, [fetchDepartures])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(fetchDepartures, 30000)
     return () => clearInterval(interval)
-  }, [station.id])
+  }, [fetchDepartures])
 
   const tabs = [
     { id: 'departures', label: 'Departures', icon: Train },
@@ -258,7 +270,7 @@ export function StationDetailsPanel({ station, onClose, onTrainClick }: StationD
                         </div>
                         {departure.delay && departure.delay > 0 && (
                           <div className="text-xs text-red-600">
-                            +{departure.delay}'
+                            +{departure.delay} min
                           </div>
                         )}
                       </div>
