@@ -65,6 +65,47 @@ export interface TrainStop {
   isSkipped?: boolean
 }
 
+// Route coordinate for detailed path drawing
+export interface RouteCoordinate {
+  lat: number
+  lng: number
+  name?: string // Optional waypoint name
+  stopId?: string // Optional stop ID if this is a station
+}
+
+// Journey leg representing one train segment
+export interface JourneyLeg {
+  legId: string
+  trainName: string
+  trainNumber?: string
+  category: string
+  operator: string
+  line?: string
+  from: Station
+  to: Station
+  departureTime: string
+  arrivalTime: string
+  duration: number // in seconds
+  platform?: string
+  exitPlatform?: string
+  stops: TrainStop[]
+  routeCoordinates: RouteCoordinate[] // Detailed path coordinates
+  color?: string // Display color for this leg
+}
+
+// Multi-leg journey
+export interface MultiLegJourney {
+  id: string
+  from: string
+  to: string
+  departureTime: string
+  arrivalTime: string
+  totalDuration: number // in seconds
+  transfers: number
+  legs: JourneyLeg[]
+  occupancy?: string
+}
+
 export interface Train {
   id: string
   name: string
@@ -92,6 +133,8 @@ export interface Train {
   timetable?: TrainStop[] // Complete journey with all stops
   departureTime?: string // Original departure time from first station
   arrivalTime?: string // Expected arrival time at final destination
+  routeCoordinates?: RouteCoordinate[] // Detailed path coordinates for route drawing
+  journey?: MultiLegJourney // Multi-leg journey if applicable
 }
 
 export interface MapSettings {

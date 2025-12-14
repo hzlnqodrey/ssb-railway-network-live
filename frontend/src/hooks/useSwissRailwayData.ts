@@ -127,8 +127,51 @@ export function useSwissRailwayData(options: UseSwissRailwayDataOptions = {}) {
 
   const trains: Train[] = trainsResponse || []
 
-  // Mock station departures
-  const getStationDepartures = async (): Promise<StationBoard | null> => null
+  // Fetch station departures from the API
+  const getStationDepartures = async (stationId: string): Promise<StationBoard | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/stations/${stationId}/departures`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch station departures')
+      }
+      const data = await response.json()
+      
+      // Transform the API response to StationBoard format
+      const station = data.data?.station as Station
+      const departures = data.data?.departures || []
+      
+      return {
+        station,
+        stationboard: departures.map((dep: {
+          trip_id?: string
+          train_name?: string
+          train_number?: string
+          category?: string
+          route_short_name?: string
+          agency_name?: string
+          headsign?: string
+          departureTime?: string
+          platform?: string
+          delay?: number
+        }) => ({
+          stop: {
+            station,
+            departure: dep.departureTime,
+            platform: dep.platform,
+            delay: dep.delay
+          },
+          name: dep.train_name || `${dep.route_short_name || ''} ${dep.train_number || ''}`.trim(),
+          category: dep.category || dep.route_short_name || 'Train',
+          number: dep.train_number,
+          operator: dep.agency_name || 'SBB',
+          to: dep.headsign || 'Unknown'
+        }))
+      }
+    } catch (error) {
+      console.error('Error fetching station departures:', error)
+      return null
+    }
+  }
 
   // Search stations
   const createSearchStationsQuery = (query: string) => ({
@@ -195,19 +238,68 @@ export function useSwissRailwayData(options: UseSwissRailwayDataOptions = {}) {
 }
 
 /**
- * Hook for managing a specific station's data
+ * Hook for managing a specific station's data with live departures
  */
 export function useStationData(stationId: string) {
-  const station = mockStations.find(s => s.id === stationId)
+  const {
+    data: stationData,
+    isLoading,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['swiss-railway', 'station', stationId, 'departures'],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/api/stations/${stationId}/departures`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch station data')
+      }
+      const data = await response.json()
+      return data.data
+    },
+    enabled: !!stationId,
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 60 * 1000, // 1 minute
+    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds
+    retry: 2
+  })
+
+  const station = stationData?.station as Station | undefined
+  const departures = stationData?.departures || []
   
   return {
     station,
-    departures: [],
-    stationBoard: station ? { station, stationboard: [] } : null,
-    isLoading: false,
-    error: null,
-    refetch: async () => {},
-    isEmpty: true
+    departures,
+    stationBoard: station ? { 
+      station, 
+      stationboard: departures.map((dep: {
+        trip_id?: string
+        train_name?: string
+        train_number?: string
+        category?: string
+        route_short_name?: string
+        agency_name?: string
+        headsign?: string
+        departureTime?: string
+        platform?: string
+        delay?: number
+      }) => ({
+        stop: {
+          station,
+          departure: dep.departureTime,
+          platform: dep.platform,
+          delay: dep.delay
+        },
+        name: dep.train_name || `${dep.route_short_name || ''} ${dep.train_number || ''}`.trim(),
+        category: dep.category || dep.route_short_name || 'Train',
+        number: dep.train_number,
+        operator: dep.agency_name || 'SBB',
+        to: dep.headsign || 'Unknown'
+      }))
+    } : null,
+    isLoading,
+    error: error as Error | null,
+    refetch,
+    isEmpty: !isLoading && departures.length === 0
   }
 }
 

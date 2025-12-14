@@ -10,13 +10,10 @@ import {
   Zap, 
   Navigation,
   AlertTriangle,
-  CheckCircle,
-  ArrowRight,
-  Calendar,
-  Building
+  CheckCircle
 } from 'lucide-react'
 import { Train as TrainType } from '@/types/railway'
-import { cn, getTrainColor, formatDelay, formatSwissTime, getRelativeTime } from '@/lib/utils'
+import { cn, getTrainColor, formatDelay, getRelativeTime } from '@/lib/utils'
 
 interface TrainDetailsProps {
   train: TrainType
@@ -393,6 +390,67 @@ export function TrainDetails({ train, onClose, onFollow, isFollowing = false, on
                 <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                   <Train className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">Timetable information not available</p>
+                </div>
+              )}
+
+              {/* Multi-Leg Journey Display */}
+              {train.journey && train.journey.legs.length > 1 && (
+                <div className="space-y-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">Journey Legs</h4>
+                    <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">
+                      {train.journey.transfers} transfer{train.journey.transfers !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  
+                  {train.journey.legs.map((leg, index) => (
+                    <div 
+                      key={leg.legId || index}
+                      className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border-l-4"
+                      style={{ borderLeftColor: leg.color || ['#dc2626', '#2563eb', '#16a34a', '#9333ea'][index % 4] }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs font-bold bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded">
+                            Leg {index + 1}
+                          </span>
+                          <span className="font-medium text-sm">{leg.trainName}</span>
+                        </div>
+                        <span className="text-xs text-gray-500">{leg.operator}</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <div className="text-gray-500">From</div>
+                          <div className="font-medium">{leg.from?.name}</div>
+                          <div className="text-blue-600">{leg.departureTime}</div>
+                          {leg.platform && <div className="text-gray-500">Pl. {leg.platform}</div>}
+                        </div>
+                        <div>
+                          <div className="text-gray-500">To</div>
+                          <div className="font-medium">{leg.to?.name}</div>
+                          <div className="text-blue-600">{leg.arrivalTime}</div>
+                          {leg.exitPlatform && <div className="text-gray-500">Pl. {leg.exitPlatform}</div>}
+                        </div>
+                      </div>
+                      
+                      {leg.stops.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                          <div className="text-xs text-gray-500">
+                            {leg.stops.length} intermediate stop{leg.stops.length !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {/* Total Journey Time */}
+                  <div className="flex items-center justify-between text-sm p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <span className="text-purple-700 dark:text-purple-300">Total Journey Time</span>
+                    <span className="font-bold text-purple-700 dark:text-purple-300">
+                      {Math.floor(train.journey.totalDuration / 3600)}h {Math.floor((train.journey.totalDuration % 3600) / 60)}m
+                    </span>
+                  </div>
                 </div>
               )}
 
