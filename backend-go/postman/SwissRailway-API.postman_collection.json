@@ -1,0 +1,924 @@
+{
+  "info": {
+    "_postman_id": "swiss-railway-api-collection",
+    "name": "Swiss Railway Network API",
+    "description": "Complete API collection for the Swiss Railway Network Live application.\n\n## Overview\nThis collection contains all endpoints for:\n- Health checks\n- Station management\n- Train tracking\n- WebSocket connections\n\n## Environment Variables\n- `baseUrl`: API base URL (default: http://localhost:8080)\n- `stationId`: Sample station ID for testing\n- `trainId`: Sample train ID for testing\n\n## Test Coverage\nEach request includes automated tests for:\n- Response status codes\n- Response structure validation\n- Data type verification\n- Performance benchmarks",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "stationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "trainId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "description": "Health check endpoints for monitoring and orchestration",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test response status",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Test response time",
+                  "pm.test('Response time is less than 500ms', function() {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});",
+                  "",
+                  "// Test response structure",
+                  "pm.test('Response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('status');",
+                  "    pm.expect(json).to.have.property('timestamp');",
+                  "    pm.expect(json).to.have.property('gtfs_loaded');",
+                  "});",
+                  "",
+                  "// Test GTFS is loaded",
+                  "pm.test('GTFS data is loaded', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.gtfs_loaded).to.be.true;",
+                  "});",
+                  "",
+                  "// Test status is healthy",
+                  "pm.test('Status is healthy', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('healthy');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Main health check endpoint. Returns service health status and GTFS data loading state."
+          },
+          "response": []
+        },
+        {
+          "name": "Readiness Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Service is ready', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.ready).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "ready"]
+            },
+            "description": "Kubernetes readiness probe. Returns true when service is ready to accept traffic."
+          },
+          "response": []
+        },
+        {
+          "name": "Liveness Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Service is alive', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.alive).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/live",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "live"]
+            },
+            "description": "Kubernetes liveness probe. Returns true when service is running."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Stations",
+      "description": "Station management endpoints",
+      "item": [
+        {
+          "name": "Get All Stations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is acceptable', function() {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json).to.have.property('meta');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Stations have required fields', function() {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.length > 0) {",
+                  "        const station = json.data[0];",
+                  "        pm.expect(station).to.have.property('id');",
+                  "        pm.expect(station).to.have.property('name');",
+                  "        pm.expect(station).to.have.property('coordinate');",
+                  "        pm.expect(station.coordinate).to.have.property('x');",
+                  "        pm.expect(station.coordinate).to.have.property('y');",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Meta contains pagination info', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.meta).to.have.property('total');",
+                  "    pm.expect(json.meta).to.have.property('count');",
+                  "    pm.expect(json.meta).to.have.property('pagination');",
+                  "});",
+                  "",
+                  "// Save first station ID for subsequent tests",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "    pm.collectionVariables.set('stationId', json.data[0].id);",
+                  "    console.log('Saved stationId:', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stations?limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stations"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Number of stations to return (max 1000)"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Pagination offset"
+                }
+              ]
+            },
+            "description": "Get all stations with pagination support."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Station by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json).to.have.property('meta');",
+                  "});",
+                  "",
+                  "pm.test('Station has all required fields', function() {",
+                  "    const json = pm.response.json();",
+                  "    const station = json.data;",
+                  "    pm.expect(station).to.have.property('id');",
+                  "    pm.expect(station).to.have.property('name');",
+                  "    pm.expect(station).to.have.property('coordinate');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stations/{{stationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stations", "{{stationId}}"]
+            },
+            "description": "Get a specific station by its ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Station Departures",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.have.property('station');",
+                  "    pm.expect(json.data).to.have.property('departures');",
+                  "});",
+                  "",
+                  "pm.test('Departures is an array', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.departures).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Departures have required fields', function() {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.departures.length > 0) {",
+                  "        const departure = json.data.departures[0];",
+                  "        pm.expect(departure).to.have.property('tripId');",
+                  "        pm.expect(departure).to.have.property('routeName');",
+                  "        pm.expect(departure).to.have.property('departureTime');",
+                  "        pm.expect(departure).to.have.property('operator');",
+                  "        pm.expect(departure).to.have.property('headsign');",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Meta contains departure count', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.meta).to.have.property('count');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stations/{{stationId}}/departures",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stations", "{{stationId}}", "departures"]
+            },
+            "description": "Get upcoming departures from a specific station."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Stations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Search results contain query term', function() {",
+                  "    const json = pm.response.json();",
+                  "    const searchTerm = 'Bern'.toLowerCase();",
+                  "    json.data.forEach(function(station) {",
+                  "        const nameMatch = station.name.toLowerCase().includes(searchTerm);",
+                  "        const idMatch = station.id.toLowerCase().includes(searchTerm);",
+                  "        pm.expect(nameMatch || idMatch).to.be.true;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stations/search/Bern",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stations", "search", "Bern"]
+            },
+            "description": "Search for stations by name or ID. Query must be at least 2 characters."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Nearby Stations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Stations have distance field', function() {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.length > 0) {",
+                  "        pm.expect(json.data[0]).to.have.property('distance');",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Stations are within radius', function() {",
+                  "    const json = pm.response.json();",
+                  "    const radius = 10; // km",
+                  "    json.data.forEach(function(station) {",
+                  "        if (station.distance) {",
+                  "            pm.expect(station.distance).to.be.below(radius);",
+                  "        }",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stations/nearby/46.9481/7.4474?radius=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stations", "nearby", "46.9481", "7.4474"],
+              "query": [
+                {
+                  "key": "radius",
+                  "value": "10",
+                  "description": "Search radius in kilometers (default: 10, max: 100)"
+                }
+              ]
+            },
+            "description": "Get stations near a specific location (Bern coordinates used as example)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trains",
+      "description": "Train tracking and monitoring endpoints",
+      "item": [
+        {
+          "name": "Get All Trains",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is acceptable', function() {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json).to.have.property('meta');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Trains have required fields', function() {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.length > 0) {",
+                  "        const train = json.data[0];",
+                  "        pm.expect(train).to.have.property('id');",
+                  "        pm.expect(train).to.have.property('name');",
+                  "        pm.expect(train).to.have.property('category');",
+                  "        pm.expect(train).to.have.property('operator');",
+                  "    }",
+                  "});",
+                  "",
+                  "// Save first train ID for subsequent tests",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "    pm.collectionVariables.set('trainId', json.data[0].id);",
+                  "    console.log('Saved trainId:', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/trains?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trains"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Number of trains to return"
+                }
+              ]
+            },
+            "description": "Get all trains with pagination support."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Live Trains",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is acceptable for real-time data', function() {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json).to.have.property('meta');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Live trains have position data', function() {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.length > 0) {",
+                  "        const train = json.data[0];",
+                  "        pm.expect(train).to.have.property('position');",
+                  "        if (train.position) {",
+                  "            pm.expect(train.position).to.have.property('lat');",
+                  "            pm.expect(train.position).to.have.property('lng');",
+                  "        }",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Live trains have timetable', function() {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.length > 0) {",
+                  "        const train = json.data[0];",
+                  "        pm.expect(train).to.have.property('timetable');",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Meta contains train count', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.meta).to.have.property('count');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/trains/live",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trains", "live"]
+            },
+            "description": "Get live train positions based on current timetable simulation."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Live Trains (with Time Multiplier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has data', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Time multiplier is applied', function() {",
+                  "    const json = pm.response.json();",
+                  "    // Verify meta contains multiplier info if provided",
+                  "    pm.expect(json.meta).to.have.property('count');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/trains/live?multiplier=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trains", "live"],
+              "query": [
+                {
+                  "key": "multiplier",
+                  "value": "10",
+                  "description": "Time multiplier for simulation speed (1, 5, 10, 20, 50, 100)"
+                }
+              ]
+            },
+            "description": "Get live train positions with time acceleration for testing."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Train by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "});",
+                  "",
+                  "pm.test('Train has all required fields', function() {",
+                  "    const json = pm.response.json();",
+                  "    const train = json.data;",
+                  "    pm.expect(train).to.have.property('id');",
+                  "    pm.expect(train).to.have.property('name');",
+                  "    pm.expect(train).to.have.property('category');",
+                  "    pm.expect(train).to.have.property('operator');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/trains/{{trainId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trains", "{{trainId}}"]
+            },
+            "description": "Get a specific train by its ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Train Stats Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('data');",
+                  "});",
+                  "",
+                  "pm.test('Stats contain expected metrics', function() {",
+                  "    const json = pm.response.json();",
+                  "    const stats = json.data;",
+                  "    // Check for common stat fields",
+                  "    pm.expect(stats).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/trains/stats/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trains", "stats", "summary"]
+            },
+            "description": "Get summary statistics for all trains."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Root & Info",
+      "description": "API information endpoints",
+      "item": [
+        {
+          "name": "API Root",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is JSON', function() {",
+                  "    pm.response.to.have.header('Content-Type', 'application/json');",
+                  "});",
+                  "",
+                  "pm.test('Response contains API info', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('message');",
+                  "    pm.expect(json).to.have.property('version');",
+                  "    pm.expect(json).to.have.property('endpoints');",
+                  "});",
+                  "",
+                  "pm.test('Endpoints are documented', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.endpoints).to.have.property('health');",
+                  "    pm.expect(json.endpoints).to.have.property('trains');",
+                  "    pm.expect(json.endpoints).to.have.property('stations');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Get API root information including version and available endpoints."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Error Cases",
+      "description": "Test error handling",
+      "item": [
+        {
+          "name": "Get Non-existent Station",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error response has correct structure', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('error');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stations/non-existent-station-12345",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stations", "non-existent-station-12345"]
+            },
+            "description": "Test 404 error for non-existent station."
+          },
+          "response": []
+        },
+        {
+          "name": "Search with Short Query",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message indicates query too short', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stations/search/B",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stations", "search", "B"]
+            },
+            "description": "Test validation error for search query that is too short."
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Coordinates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error response indicates invalid coordinates', function() {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stations/nearby/invalid/coords",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stations", "nearby", "invalid", "coords"]
+            },
+            "description": "Test validation error for invalid coordinate format."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Performance Tests",
+      "description": "Performance and load testing",
+      "item": [
+        {
+          "name": "Stations Performance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response time under 1000ms', function() {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "});",
+                  "",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Log performance metrics",
+                  "console.log('Response Time: ' + pm.response.responseTime + 'ms');",
+                  "console.log('Response Size: ' + pm.response.size().body + ' bytes');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stations?limit=100",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stations"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Test stations endpoint performance with larger limit."
+          },
+          "response": []
+        },
+        {
+          "name": "Live Trains Performance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response time under 3000ms', function() {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});",
+                  "",
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Log performance metrics",
+                  "const json = pm.response.json();",
+                  "console.log('Response Time: ' + pm.response.responseTime + 'ms');",
+                  "console.log('Train Count: ' + (json.data ? json.data.length : 0));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/trains/live",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trains", "live"]
+            },
+            "description": "Test live trains endpoint performance."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

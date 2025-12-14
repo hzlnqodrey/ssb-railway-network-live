@@ -25,7 +25,7 @@ L.Icon.Default.mergeOptions({
 // Swiss coordinates center (Bern)
 const SWISS_CENTER: [number, number] = [46.8182, 8.2275]
 const DEFAULT_ZOOM = 8
-const FOLLOW_ZOOM = 12
+const FOLLOW_ZOOM = 18 // Maximum zoom for detailed train following
 
 // Swiss timezone
 const SWISS_TIMEZONE = 'Europe/Zurich'
@@ -427,6 +427,19 @@ function MultiLegRoute({ train }: { train: Train | null }) {
   )
 }
 
+// Helper to get persisted time multiplier from localStorage
+function getPersistedTimeMultiplier(): number {
+  if (typeof window === 'undefined') return 1
+  const stored = localStorage.getItem('swiss-railway-time-multiplier')
+  if (stored) {
+    const parsed = parseInt(stored, 10)
+    if ([1, 5, 10, 20, 50, 100].includes(parsed)) {
+      return parsed
+    }
+  }
+  return 1
+}
+
 export default function SwissRailwayMap({ className, forceExpandControls = false }: SwissRailwayMapProps) {
   const [selectedTrain, setSelectedTrain] = useState<Train | null>(null)
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
@@ -437,7 +450,7 @@ export default function SwissRailwayMap({ className, forceExpandControls = false
   const [showTrains, setShowTrains] = useState(true)
   const [mapType, setMapType] = useState<'standard' | 'satellite' | 'terrain' | 'dark'>('standard')
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(true)
-  const [timeMultiplier, setTimeMultiplier] = useState(1)
+  const [timeMultiplier, setTimeMultiplier] = useState(() => getPersistedTimeMultiplier())
   const [swissTime, setSwissTime] = useState(() => formatSwissTimeNow())
   const [swissDate, setSwissDate] = useState(() => formatSwissDateNow())
 
@@ -466,6 +479,13 @@ export default function SwissRailwayMap({ className, forceExpandControls = false
 
     return () => clearInterval(interval)
   }, [])
+
+  // Persist time multiplier to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('swiss-railway-time-multiplier', timeMultiplier.toString())
+    }
+  }, [timeMultiplier])
 
   // Handle train follow with zoom
   const handleFollowTrain = useCallback((trainId: string) => {

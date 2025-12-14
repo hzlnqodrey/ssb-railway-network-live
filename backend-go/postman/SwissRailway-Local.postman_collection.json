@@ -1,0 +1,39 @@
+{
+  "id": "swiss-railway-local-env",
+  "name": "Swiss Railway - Local",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "wsUrl",
+      "value": "ws://localhost:8080/ws",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "frontendUrl",
+      "value": "http://localhost:3000",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "stationId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "trainId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_at": "2025-12-14T00:00:00.000Z",
+  "_postman_exported_using": "Swiss Railway Network API"
+}

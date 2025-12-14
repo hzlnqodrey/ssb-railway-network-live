@@ -137,20 +137,21 @@ export function useSwissRailwayData(options: UseSwissRailwayDataOptions = {}) {
       const data = await response.json()
       
       // Transform the API response to StationBoard format
+      // API returns: tripId, routeName, routeLongName, headsign, operator, departureTime, arrivalTime, sequence
       const station = data.data?.station as Station
       const departures = data.data?.departures || []
       
       return {
         station,
         stationboard: departures.map((dep: {
-          trip_id?: string
-          train_name?: string
-          train_number?: string
-          category?: string
-          route_short_name?: string
-          agency_name?: string
+          tripId?: string
+          routeName?: string
+          routeLongName?: string
           headsign?: string
+          operator?: string
           departureTime?: string
+          arrivalTime?: string
+          sequence?: number
           platform?: string
           delay?: number
         }) => ({
@@ -160,11 +161,11 @@ export function useSwissRailwayData(options: UseSwissRailwayDataOptions = {}) {
             platform: dep.platform,
             delay: dep.delay
           },
-          name: dep.train_name || `${dep.route_short_name || ''} ${dep.train_number || ''}`.trim(),
-          category: dep.category || dep.route_short_name || 'Train',
-          number: dep.train_number,
-          operator: dep.agency_name || 'SBB',
-          to: dep.headsign || 'Unknown'
+          name: dep.routeName || 'Train',
+          category: dep.routeName || 'Train',
+          number: dep.tripId?.split('_')[1],
+          operator: dep.operator || 'SBB',
+          to: dep.headsign || dep.routeLongName || dep.routeName || 'See timetable'
         }))
       }
     } catch (error) {
@@ -272,14 +273,14 @@ export function useStationData(stationId: string) {
     stationBoard: station ? { 
       station, 
       stationboard: departures.map((dep: {
-        trip_id?: string
-        train_name?: string
-        train_number?: string
-        category?: string
-        route_short_name?: string
-        agency_name?: string
+        tripId?: string
+        routeName?: string
+        routeLongName?: string
         headsign?: string
+        operator?: string
         departureTime?: string
+        arrivalTime?: string
+        sequence?: number
         platform?: string
         delay?: number
       }) => ({
@@ -289,11 +290,11 @@ export function useStationData(stationId: string) {
           platform: dep.platform,
           delay: dep.delay
         },
-        name: dep.train_name || `${dep.route_short_name || ''} ${dep.train_number || ''}`.trim(),
-        category: dep.category || dep.route_short_name || 'Train',
-        number: dep.train_number,
-        operator: dep.agency_name || 'SBB',
-        to: dep.headsign || 'Unknown'
+        name: dep.routeName || 'Train',
+        category: dep.routeName || 'Train',
+        number: dep.tripId?.split('_')[1],
+        operator: dep.operator || 'SBB',
+        to: dep.headsign || dep.routeLongName || dep.routeName || 'See timetable'
       }))
     } : null,
     isLoading,

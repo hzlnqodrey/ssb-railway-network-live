@@ -422,12 +422,22 @@ func (s *GTFSService) GetStationDepartures(stopID string) *models.StationDepartu
 			agencyName = agency["agency_name"]
 		}
 
+		// Get headsign - prefer trip_headsign, fallback to route_long_name
+		headsign := trip["trip_headsign"]
+		if headsign == "" {
+			headsign = route["route_long_name"]
+		}
+		if headsign == "" {
+			headsign = route["route_short_name"]
+		}
+
 		seq, _ := strconv.Atoi(st["stop_sequence"])
 
 		departures = append(departures, models.Departure{
 			TripID:        st["trip_id"],
 			RouteName:     route["route_short_name"],
 			RouteLongName: route["route_long_name"],
+			Headsign:      headsign,
 			Operator:      agencyName,
 			DepartureTime: st["departure_time"],
 			ArrivalTime:   st["arrival_time"],

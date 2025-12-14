@@ -63,6 +63,7 @@ type Departure struct {
 	TripID        string `json:"tripId"`
 	RouteName     string `json:"routeName"`
 	RouteLongName string `json:"routeLongName"`
+	Headsign      string `json:"headsign"`
 	Operator      string `json:"operator"`
 	DepartureTime string `json:"departureTime"`
 	ArrivalTime   string `json:"arrivalTime"`
