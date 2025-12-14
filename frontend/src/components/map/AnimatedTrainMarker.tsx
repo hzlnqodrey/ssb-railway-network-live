@@ -10,6 +10,7 @@ import { Clock, Users, Zap, Navigation, TrendingUp } from 'lucide-react'
 interface AnimatedTrainMarkerProps {
   train: Train
   isSelected?: boolean
+  isFollowed?: boolean
   onClick?: () => void
   animationDuration?: number // in milliseconds
 }
@@ -136,6 +137,7 @@ function createAnimatedTrainIcon(
 export function AnimatedTrainMarker({ 
   train, 
   isSelected = false, 
+  isFollowed = false,
   onClick,
   animationDuration = 1000
 }: AnimatedTrainMarkerProps) {
@@ -208,7 +210,7 @@ export function AnimatedTrainMarker({
     }
   }, [train.direction])
 
-  const icon = createAnimatedTrainIcon(train, isSelected, isMoving)
+  const icon = createAnimatedTrainIcon(train, isSelected || isFollowed, isMoving)
 
   return (
     <Marker

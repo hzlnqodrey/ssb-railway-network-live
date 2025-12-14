@@ -93,6 +93,7 @@ type APIMeta struct {
 	Filters        interface{} `json:"filters,omitempty"`
 	Note           string      `json:"note,omitempty"`
 	UpdateInterval int         `json:"updateInterval,omitempty"`
+	TimeMultiplier float64     `json:"timeMultiplier,omitempty"`
 }
 
 // APIResponse is the standard response wrapper.

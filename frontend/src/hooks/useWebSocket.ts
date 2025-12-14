@@ -36,7 +36,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const {
     url = process.env.NODE_ENV === 'production' 
       ? 'wss://your-production-domain.com/ws'
-      : 'ws://localhost:8000/ws',
+      : 'ws://localhost:8080/ws',
     enabled = true, // Enabled by default as requested
     reconnectAttempts = 5,
     reconnectInterval = 5000,

@@ -452,8 +452,24 @@ func (s *GTFSService) GetStationDepartures(stopID string) *models.StationDepartu
 	}
 }
 
-// GetLiveTrains returns simulated live train positions based on GTFS data.
+// parseTimeToMinutes converts HH:MM:SS to minutes from midnight
+func parseTimeToMinutes(timeStr string) int {
+	parts := strings.Split(timeStr, ":")
+	if len(parts) < 2 {
+		return -1
+	}
+	hours, _ := strconv.Atoi(parts[0])
+	minutes, _ := strconv.Atoi(parts[1])
+	return hours*60 + minutes
+}
+
+// GetLiveTrains returns real-time train positions based on GTFS timetable and current time.
 func (s *GTFSService) GetLiveTrains() []models.Train {
+	return s.GetLiveTrainsWithMultiplier(1.0)
+}
+
+// GetLiveTrainsWithMultiplier returns real-time train positions with time multiplier support.
+func (s *GTFSService) GetLiveTrainsWithMultiplier(multiplier float64) []models.Train {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -461,23 +477,41 @@ func (s *GTFSService) GetLiveTrains() []models.Train {
 		return []models.Train{}
 	}
 
-	// Get unique trip IDs (limit to 15 for demo)
-	tripIDs := make(map[string]bool)
-	var uniqueTripIDs []string
-	for _, st := range s.stopTimes {
-		if !tripIDs[st["trip_id"]] {
-			tripIDs[st["trip_id"]] = true
-			uniqueTripIDs = append(uniqueTripIDs, st["trip_id"])
-			if len(uniqueTripIDs) >= 15 {
-				break
-			}
-		}
+	// Get current Swiss time
+	loc, _ := time.LoadLocation("Europe/Zurich")
+	now := time.Now().In(loc)
+
+	// Apply time multiplier by offsetting minutes from midnight
+	baseMinutes := now.Hour()*60 + now.Minute()
+	effectiveMinutes := int(float64(baseMinutes)*multiplier) % (24 * 60)
+	if effectiveMinutes < 0 {
+		effectiveMinutes += 24 * 60
 	}
 
-	now := time.Now()
+	currentSeconds := now.Second()
+
 	var trains []models.Train
 
-	for idx, tripID := range uniqueTripIDs {
+	// Group stop_times by trip_id for efficient lookup
+	tripStopTimes := make(map[string][]map[string]string)
+	for _, st := range s.stopTimes {
+		tripID := st["trip_id"]
+		tripStopTimes[tripID] = append(tripStopTimes[tripID], st)
+	}
+
+	// Process each trip and find active trains
+	trainCount := 0
+	maxTrains := 30 // Limit for performance
+
+	for tripID, tripStops := range tripStopTimes {
+		if trainCount >= maxTrains {
+			break
+		}
+
+		if len(tripStops) < 2 {
+			continue
+		}
+
 		trip := s.tripsIndex[tripID]
 		if trip == nil {
 			continue
@@ -488,56 +522,110 @@ func (s *GTFSService) GetLiveTrains() []models.Train {
 			continue
 		}
 
-		agencyName := "SBB"
-		if agency := s.agenciesIndex[route["agency_id"]]; agency != nil {
-			agencyName = agency["agency_name"]
-		}
-
-		// Get all stops for this trip
-		var tripStops []map[string]string
-		for _, st := range s.stopTimes {
-			if st["trip_id"] == tripID {
-				tripStops = append(tripStops, st)
-			}
-		}
-
-		if len(tripStops) == 0 {
-			continue
-		}
-
-		// Sort by sequence
+		// Sort stops by sequence
 		sort.Slice(tripStops, func(i, j int) bool {
 			seqI, _ := strconv.Atoi(tripStops[i]["stop_sequence"])
 			seqJ, _ := strconv.Atoi(tripStops[j]["stop_sequence"])
 			return seqI < seqJ
 		})
 
-		// Simulate train movement
-		routeProgress := float64(now.UnixMilli()%120000) / 120000 // 2-minute cycle
-		currentStopIdx := int(routeProgress * float64(len(tripStops)))
-		if currentStopIdx >= len(tripStops) {
-			currentStopIdx = len(tripStops) - 1
+		// Get first departure time and last arrival time
+		firstDeparture := tripStops[0]["departure_time"]
+		lastArrival := tripStops[len(tripStops)-1]["arrival_time"]
+
+		if firstDeparture == "" || lastArrival == "" {
+			continue
 		}
 
-		currentStopTime := tripStops[currentStopIdx]
-		currentStop := s.stopsIndex[currentStopTime["stop_id"]]
+		tripStartMinutes := parseTimeToMinutes(firstDeparture)
+		tripEndMinutes := parseTimeToMinutes(lastArrival)
 
-		firstStop := s.stopsIndex[tripStops[0]["stop_id"]]
-		lastStop := s.stopsIndex[tripStops[len(tripStops)-1]["stop_id"]]
+		if tripStartMinutes < 0 || tripEndMinutes < 0 {
+			continue
+		}
 
-		var position *models.Position
-		var currentStation *models.Station
+		// Check if this train is currently active
+		if effectiveMinutes < tripStartMinutes || effectiveMinutes > tripEndMinutes {
+			continue
+		}
 
-		if currentStop != nil {
-			lat, _ := strconv.ParseFloat(currentStop["stop_lat"], 64)
-			lon, _ := strconv.ParseFloat(currentStop["stop_lon"], 64)
-			position = &models.Position{Lat: lat, Lng: lon}
-			currentStation = &models.Station{
-				ID:         currentStop["stop_id"],
-				Name:       currentStop["stop_name"],
-				Coordinate: models.Coordinate{X: lon, Y: lat},
+		// Find current position between stops
+		var fromStopIdx, toStopIdx int
+		var fromMinutes, toMinutes int
+
+		for i := 0; i < len(tripStops)-1; i++ {
+			depTime := tripStops[i]["departure_time"]
+			nextArrTime := tripStops[i+1]["arrival_time"]
+
+			if depTime == "" {
+				depTime = tripStops[i]["arrival_time"]
+			}
+			if nextArrTime == "" {
+				nextArrTime = tripStops[i+1]["departure_time"]
+			}
+
+			fromMins := parseTimeToMinutes(depTime)
+			toMins := parseTimeToMinutes(nextArrTime)
+
+			if fromMins >= 0 && toMins >= 0 && effectiveMinutes >= fromMins && effectiveMinutes <= toMins {
+				fromStopIdx = i
+				toStopIdx = i + 1
+				fromMinutes = fromMins
+				toMinutes = toMins
+				break
 			}
 		}
+
+		// If we found a valid segment, interpolate position
+		fromStop := s.stopsIndex[tripStops[fromStopIdx]["stop_id"]]
+		toStop := s.stopsIndex[tripStops[toStopIdx]["stop_id"]]
+
+		if fromStop == nil || toStop == nil {
+			continue
+		}
+
+		fromLat, _ := strconv.ParseFloat(fromStop["stop_lat"], 64)
+		fromLon, _ := strconv.ParseFloat(fromStop["stop_lon"], 64)
+		toLat, _ := strconv.ParseFloat(toStop["stop_lat"], 64)
+		toLon, _ := strconv.ParseFloat(toStop["stop_lon"], 64)
+
+		// Calculate interpolation progress
+		var progress float64
+		segmentDuration := toMinutes - fromMinutes
+		if segmentDuration > 0 {
+			elapsedInSegment := effectiveMinutes - fromMinutes
+			progress = float64(elapsedInSegment) / float64(segmentDuration)
+			// Add second-level precision
+			secondProgress := float64(currentSeconds) / 60.0 / float64(segmentDuration)
+			progress += secondProgress
+			if progress > 1.0 {
+				progress = 1.0
+			}
+		}
+
+		// Interpolate position
+		currentLat := fromLat + (toLat-fromLat)*progress
+		currentLon := fromLon + (toLon-fromLon)*progress
+
+		// Calculate direction (bearing)
+		direction := calculateBearing(fromLat, fromLon, toLat, toLon)
+
+		// Calculate speed based on distance and time
+		distance := haversineDistance(fromLat, fromLon, toLat, toLon)
+		var speed int
+		if segmentDuration > 0 {
+			speed = int(distance / (float64(segmentDuration) / 60.0)) // km/h
+		}
+		if speed < 20 {
+			speed = 60 + rand.Intn(40) // Default speed for short segments
+		}
+		if speed > 200 {
+			speed = 160 + rand.Intn(40) // Cap high-speed trains
+		}
+
+		// Get first and last stops
+		firstStop := s.stopsIndex[tripStops[0]["stop_id"]]
+		lastStop := s.stopsIndex[tripStops[len(tripStops)-1]["stop_id"]]
 
 		fromName := "Unknown"
 		toName := "Unknown"
@@ -553,8 +641,18 @@ func (s *GTFSService) GetLiveTrains() []models.Train {
 			routeShortName = "Train"
 		}
 
-		// Build timetable
+		agencyName := "SBB"
+		if agency := s.agenciesIndex[route["agency_id"]]; agency != nil {
+			agencyName = agency["agency_name"]
+		}
+
+		// Build timetable with correct passed/current status based on effective time
 		timetable := make([]models.TrainStop, len(tripStops))
+
+		// Current effective time in seconds for precise comparison
+		effectiveTimeSeconds := effectiveMinutes*60 + currentSeconds
+
+		// First pass: mark all passed stations
 		for i, ts := range tripStops {
 			stop := s.stopsIndex[ts["stop_id"]]
 			var station *models.Station
@@ -567,39 +665,126 @@ func (s *GTFSService) GetLiveTrains() []models.Train {
 					Coordinate: models.Coordinate{X: lon, Y: lat},
 				}
 			}
+
+			// Parse times
+			stopArrMinutes := parseTimeToMinutes(ts["arrival_time"])
+			stopDepMinutes := parseTimeToMinutes(ts["departure_time"])
+
+			// For first stop, use departure time as arrival
+			if stopArrMinutes < 0 && stopDepMinutes >= 0 {
+				stopArrMinutes = stopDepMinutes
+			}
+			// For last stop, use arrival time as departure
+			if stopDepMinutes < 0 && stopArrMinutes >= 0 {
+				stopDepMinutes = stopArrMinutes
+			}
+
+			isPassed := false
+			isCurrent := false
+
+			// Determine status based on effective time
+			if stopDepMinutes >= 0 {
+				stopDepSeconds := stopDepMinutes * 60
+				stopArrSeconds := stopArrMinutes * 60
+
+				if effectiveTimeSeconds > stopDepSeconds {
+					// Train has departed from this station
+					isPassed = true
+				} else if stopArrSeconds >= 0 && effectiveTimeSeconds >= stopArrSeconds && effectiveTimeSeconds <= stopDepSeconds {
+					// Train is currently at this station (stopped at platform)
+					isCurrent = true
+				}
+			}
+
+			platform := strconv.Itoa((i % 10) + 1) // Deterministic platform based on index
+
 			timetable[i] = models.TrainStop{
 				Station:          station,
 				ArrivalTime:      ts["arrival_time"],
 				DepartureTime:    ts["departure_time"],
-				Platform:         strconv.Itoa(rand.Intn(10) + 1),
-				IsCurrentStation: i == currentStopIdx,
-				IsPassed:         i < currentStopIdx,
+				Platform:         platform,
+				IsCurrentStation: isCurrent,
+				IsPassed:         isPassed,
 				IsSkipped:        false,
 			}
 		}
 
+		// Second pass: if no station is marked as current, mark the next upcoming station
+		hasCurrentStation := false
+		for _, stop := range timetable {
+			if stop.IsCurrentStation {
+				hasCurrentStation = true
+				break
+			}
+		}
+
+		if !hasCurrentStation {
+			// Find the first non-passed station and mark it as current
+			for i := range timetable {
+				if !timetable[i].IsPassed {
+					timetable[i].IsCurrentStation = true
+					break
+				}
+			}
+		}
+
+		// Determine current station
+		var currentStation *models.Station
+		if progress < 0.5 {
+			currentStation = timetable[fromStopIdx].Station
+		} else {
+			currentStation = timetable[toStopIdx].Station
+		}
+
+		// Generate consistent delay based on trip ID
+		tripHash := 0
+		for _, c := range tripID {
+			tripHash += int(c)
+		}
+		delay := tripHash % 7 // 0-6 minutes delay
+
 		trains = append(trains, models.Train{
-			ID:             fmt.Sprintf("%s-%d", tripID, idx),
+			ID:             tripID,
 			Name:           routeShortName,
 			Category:       strings.Split(routeShortName, " ")[0],
 			Number:         tripID,
 			Operator:       agencyName,
 			From:           fromName,
 			To:             toName,
-			Position:       position,
+			Position:       &models.Position{Lat: currentLat, Lng: currentLon},
 			CurrentStation: currentStation,
-			Delay:          rand.Intn(5),
+			Delay:          delay,
 			Cancelled:      false,
-			Speed:          60 + rand.Intn(40),
-			Direction:      rand.Intn(360),
-			LastUpdate:     time.Now().Format(time.RFC3339),
+			Speed:          speed,
+			Direction:      direction,
+			LastUpdate:     now.Format(time.RFC3339),
 			DepartureTime:  tripStops[0]["departure_time"],
 			ArrivalTime:    tripStops[len(tripStops)-1]["arrival_time"],
 			Timetable:      timetable,
 		})
+
+		trainCount++
 	}
 
+	// Sort trains by name for consistent ordering
+	sort.Slice(trains, func(i, j int) bool {
+		return trains[i].Name < trains[j].Name
+	})
+
 	return trains
+}
+
+// calculateBearing calculates the bearing between two coordinates
+func calculateBearing(lat1, lon1, lat2, lon2 float64) int {
+	lat1Rad := lat1 * math.Pi / 180
+	lat2Rad := lat2 * math.Pi / 180
+	dLon := (lon2 - lon1) * math.Pi / 180
+
+	y := math.Sin(dLon) * math.Cos(lat2Rad)
+	x := math.Cos(lat1Rad)*math.Sin(lat2Rad) - math.Sin(lat1Rad)*math.Cos(lat2Rad)*math.Cos(dLon)
+
+	bearing := math.Atan2(y, x) * 180 / math.Pi
+	return int(math.Mod(bearing+360, 360))
 }
 
 // GetTrainStats returns aggregated train statistics.

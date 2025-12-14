@@ -21,9 +21,13 @@ import { cn, getTrainColor, formatDelay, formatSwissTime, getRelativeTime } from
 interface TrainDetailsProps {
   train: TrainType
   onClose: () => void
+  onFollow?: () => void
+  isFollowing?: boolean
+  onDrawRoute?: () => void
+  isRouteDrawn?: boolean
 }
 
-export function TrainDetails({ train, onClose }: TrainDetailsProps) {
+export function TrainDetails({ train, onClose, onFollow, isFollowing = false, onDrawRoute, isRouteDrawn = false }: TrainDetailsProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'route' | 'occupancy'>('overview')
   
   const isDelayed = (train.delay || 0) > 2
@@ -135,11 +139,27 @@ export function TrainDetails({ train, onClose }: TrainDetailsProps) {
 
               {/* Action Buttons */}
               <div className="flex space-x-2">
-                <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors">
-                  Follow
+                <button 
+                  onClick={onFollow}
+                  className={cn(
+                    "flex-1 text-sm font-medium py-2 px-3 rounded-lg transition-colors",
+                    isFollowing 
+                      ? "bg-green-600 hover:bg-green-700 text-white" 
+                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                  )}
+                >
+                  {isFollowing ? '✓ Following' : 'Follow'}
                 </button>
-                <button className="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors">
-                  Draw route
+                <button 
+                  onClick={onDrawRoute}
+                  className={cn(
+                    "flex-1 text-sm font-medium py-2 px-3 rounded-lg transition-colors",
+                    isRouteDrawn 
+                      ? "bg-purple-600 hover:bg-purple-700 text-white" 
+                      : "bg-gray-600 hover:bg-gray-700 text-white"
+                  )}
+                >
+                  {isRouteDrawn ? '✓ Route shown' : 'Draw route'}
                 </button>
               </div>
 
@@ -278,8 +298,9 @@ export function TrainDetails({ train, onClose }: TrainDetailsProps) {
                   </div>
                   
                   {/* Table Body */}
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-b-lg overflow-hidden">
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-b-lg overflow-hidden max-h-64 overflow-y-auto">
                     {train.timetable.map((stop, index) => {
+                      if (!stop.station) return null
                       const hasDelay = (stop.arrivalDelay && stop.arrivalDelay > 0) || (stop.departureDelay && stop.departureDelay > 0)
                       
                       return (

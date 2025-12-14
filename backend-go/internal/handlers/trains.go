@@ -89,14 +89,22 @@ func (h *TrainsHandler) GetTrains(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// GetLiveTrains returns live train positions.
+// GetLiveTrains returns live train positions with optional time multiplier.
 func (h *TrainsHandler) GetLiveTrains(w http.ResponseWriter, r *http.Request) {
 	if !h.gtfsService.IsDataLoaded() {
 		sendServiceUnavailable(w)
 		return
 	}
 
-	trains := h.gtfsService.GetLiveTrains()
+	// Parse time multiplier from query parameter
+	multiplier := 1.0
+	if multiplierStr := r.URL.Query().Get("multiplier"); multiplierStr != "" {
+		if m, err := strconv.ParseFloat(multiplierStr, 64); err == nil && m > 0 && m <= 100 {
+			multiplier = m
+		}
+	}
+
+	trains := h.gtfsService.GetLiveTrainsWithMultiplier(multiplier)
 
 	response := models.APIResponse{
 		Data: trains,
@@ -104,7 +112,8 @@ func (h *TrainsHandler) GetLiveTrains(w http.ResponseWriter, r *http.Request) {
 			Timestamp:      time.Now().Format(time.RFC3339),
 			Source:         "swiss_gtfs_data",
 			UpdateInterval: 5000,
-			Note:           "Live train positions from Swiss GTFS data",
+			TimeMultiplier: multiplier,
+			Note:           "Live train positions based on Swiss GTFS timetable",
 		},
 	}
 

@@ -122,12 +122,50 @@ export function formatSwissTime(dateString: string): string {
   const date = new Date(dateString)
   return date.toLocaleTimeString('de-CH', {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'Europe/Zurich'
   })
 }
 
 /**
+ * Get current Swiss time as formatted string
+ */
+export function getSwissTimeString(): string {
+  return new Date().toLocaleTimeString('de-CH', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZone: 'Europe/Zurich'
+  })
+}
+
+/**
+ * Get Swiss date as formatted string
+ */
+export function getSwissDateString(): string {
+  return new Date().toLocaleDateString('de-CH', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Europe/Zurich'
+  })
+}
+
+/**
+ * Format time string (HH:MM:SS) to display format
+ */
+export function formatTimeString(timeStr: string): string {
+  if (!timeStr) return ''
+  const parts = timeStr.split(':')
+  if (parts.length < 2) return timeStr
+  return `${parts[0]}:${parts[1]}`
+}
+
+/**
  * Get relative time (e.g., "2 minutes ago")
+ * Note: This compares against current time (works correctly regardless of timezone)
  */
 export function getRelativeTime(dateString: string): string {
   const now = new Date()
