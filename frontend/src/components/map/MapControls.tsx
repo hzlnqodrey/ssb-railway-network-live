@@ -15,9 +15,15 @@ import {
   Eye,
   EyeOff,
   Moon,
-  Sun
+  Sun,
+  GripVertical,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  Home
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useDraggable } from '@/hooks/useDraggable'
 
 interface MapControlsProps {
   showStations: boolean
@@ -31,6 +37,9 @@ interface MapControlsProps {
   trainsCount: number
   stationsCount: number
   forceExpanded?: boolean
+  onZoomIn?: () => void
+  onZoomOut?: () => void
+  onResetView?: () => void
 }
 
 export function MapControls({
@@ -44,9 +53,27 @@ export function MapControls({
   setIsRealtimeEnabled,
   trainsCount,
   stationsCount,
-  forceExpanded = false
+  forceExpanded = false,
+  onZoomIn,
+  onZoomOut,
+  onResetView
 }: MapControlsProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  
+  // Draggable functionality
+  const {
+    position,
+    isDragging,
+    containerRef,
+    handleMouseDown,
+    handleTouchStart,
+    resetPosition,
+    isInitialized
+  } = useDraggable({
+    storageKey: 'map-controls-position',
+    defaultPosition: { x: 16, y: 100 },
+    bottomRelative: true
+  })
   
   // Update expanded state when forceExpanded changes
   useEffect(() => {
@@ -62,10 +89,48 @@ export function MapControls({
     { value: 'dark', label: 'Dark', icon: Moon }
   ] as const
 
+  // Don't render until position is initialized
+  if (!isInitialized) return null
+
   return (
-    <div className="absolute bottom-4 left-4 z-[1000]">
+    <div 
+      ref={containerRef}
+      className={cn(
+        "fixed z-[1000]",
+        isDragging && "cursor-grabbing select-none"
+      )}
+      style={{
+        left: position.x,
+        top: position.y,
+        touchAction: 'none'
+      }}
+    >
       {/* Main Controls Panel */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {/* Drag Handle Header */}
+        <div 
+          className={cn(
+            "flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700",
+            isDragging ? "cursor-grabbing" : "cursor-grab"
+          )}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+        >
+          <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+            <GripVertical className="w-4 h-4" />
+            <Settings className="w-4 h-4" />
+            <span className="text-xs font-medium">Controls</span>
+          </div>
+          <button
+            onClick={resetPosition}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            title="Reset position"
+          >
+            <RotateCcw className="w-3 h-3" />
+          </button>
+        </div>
+
         {/* Always Visible Controls */}
         <div className="p-3 space-y-3">
           {/* Real-time Toggle */}
@@ -120,6 +185,34 @@ export function MapControls({
               <MapPin className="w-3 h-3" />
               <span>{stationsCount}</span>
             </button>
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Zoom</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onZoomOut}
+                className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title="Zoom out"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onZoomIn}
+                className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title="Zoom in"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onResetView}
+                className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title="Reset to Switzerland view"
+              >
+                <Home className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -253,7 +346,6 @@ export function MapControls({
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center space-x-1"
         >
-          <Settings className="w-3 h-3" />
           <span className="text-xs">
             {isExpanded ? 'Less' : 'More'}
           </span>
@@ -264,6 +356,11 @@ export function MapControls({
           )}
         </button>
       </div>
+
+      {/* Drag indicator overlay */}
+      {isDragging && (
+        <div className="fixed inset-0 z-[-1] bg-black/5 pointer-events-none" />
+      )}
     </div>
   )
 }
