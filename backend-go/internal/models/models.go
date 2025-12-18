@@ -1,65 +1,50 @@
 // Package models defines all data structures for the Swiss Railway API.
-// These models are designed to be compatible with the frontend expectations.
+//
+// ============================================================================
+// MONOLITHIC VERSION - For Documentation & Comparison
+// ============================================================================
+// This file is kept for educational purposes to compare with the microservice
+// approach where models are split into domain-specific files:
+//   - station.go, train.go, favorites.go, api.go, gtfs.go, health.go
+//
+// In production, you can choose either approach:
+// - Monolith: All models in one file (simpler, easier to navigate small projects)
+// - Microservice: Split by domain (better for large teams, clearer boundaries)
+// ============================================================================
 package models
 
 import "time"
 
+// ============================================================================
+// GEOGRAPHY DOMAIN
+// ============================================================================
+
 // Coordinate represents a geographic location.
-type Coordinate struct {
+type CoordinateMonolith struct {
 	X float64 `json:"x"` // Longitude
 	Y float64 `json:"y"` // Latitude
 }
 
-// Station represents a railway station.
-type Station struct {
-	ID         string     `json:"id"`
-	Name       string     `json:"name"`
-	Coordinate Coordinate `json:"coordinate"`
-	Distance   *float64   `json:"distance,omitempty"`
-}
-
 // Position represents a train's geographic position.
-type Position struct {
+type PositionMonolith struct {
 	Lat float64 `json:"lat"`
 	Lng float64 `json:"lng"`
 }
 
-// TrainStop represents a stop in a train's timetable.
-type TrainStop struct {
-	Station          *Station `json:"station,omitempty"`
-	ArrivalTime      string   `json:"arrivalTime,omitempty"`
-	DepartureTime    string   `json:"departureTime,omitempty"`
-	ArrivalDelay     int      `json:"arrivalDelay,omitempty"`
-	DepartureDelay   int      `json:"departureDelay,omitempty"`
-	Platform         string   `json:"platform,omitempty"`
-	IsCurrentStation bool     `json:"isCurrentStation,omitempty"`
-	IsPassed         bool     `json:"isPassed,omitempty"`
-	IsSkipped        bool     `json:"isSkipped,omitempty"`
-}
+// ============================================================================
+// STATION DOMAIN
+// ============================================================================
 
-// Train represents a train with its current status and position.
-type Train struct {
-	ID             string      `json:"id"`
-	Name           string      `json:"name"`
-	Category       string      `json:"category"`
-	Number         string      `json:"number"`
-	Operator       string      `json:"operator"`
-	From           string      `json:"from"`
-	To             string      `json:"to"`
-	Position       *Position   `json:"position,omitempty"`
-	CurrentStation *Station    `json:"currentStation,omitempty"`
-	Delay          int         `json:"delay"`
-	Cancelled      bool        `json:"cancelled"`
-	Speed          int         `json:"speed"`
-	Direction      int         `json:"direction"`
-	LastUpdate     string      `json:"lastUpdate"`
-	DepartureTime  string      `json:"departureTime,omitempty"`
-	ArrivalTime    string      `json:"arrivalTime,omitempty"`
-	Timetable      []TrainStop `json:"timetable,omitempty"`
+// Station represents a railway station.
+type StationMonolith struct {
+	ID         string             `json:"id"`
+	Name       string             `json:"name"`
+	Coordinate CoordinateMonolith `json:"coordinate"`
+	Distance   *float64           `json:"distance,omitempty"`
 }
 
 // Departure represents a scheduled departure from a station.
-type Departure struct {
+type DepartureMonolith struct {
 	TripID        string `json:"tripId"`
 	RouteName     string `json:"routeName"`
 	RouteLongName string `json:"routeLongName"`
@@ -71,59 +56,53 @@ type Departure struct {
 }
 
 // StationDepartures contains a station and its upcoming departures.
-type StationDepartures struct {
-	Station    *Station    `json:"station"`
-	Departures []Departure `json:"departures"`
-	Count      int         `json:"count"`
-	Timestamp  string      `json:"timestamp"`
+type StationDeparturesMonolith struct {
+	Station    *StationMonolith    `json:"station"`
+	Departures []DepartureMonolith `json:"departures"`
+	Count      int                 `json:"count"`
+	Timestamp  string              `json:"timestamp"`
 }
 
-// Pagination holds pagination metadata.
-type Pagination struct {
-	Limit  int `json:"limit"`
-	Offset int `json:"offset"`
+// ============================================================================
+// TRAIN DOMAIN
+// ============================================================================
+
+// TrainStop represents a stop in a train's timetable.
+type TrainStopMonolith struct {
+	Station          *StationMonolith `json:"station,omitempty"`
+	ArrivalTime      string           `json:"arrivalTime,omitempty"`
+	DepartureTime    string           `json:"departureTime,omitempty"`
+	ArrivalDelay     int              `json:"arrivalDelay,omitempty"`
+	DepartureDelay   int              `json:"departureDelay,omitempty"`
+	Platform         string           `json:"platform,omitempty"`
+	IsCurrentStation bool             `json:"isCurrentStation,omitempty"`
+	IsPassed         bool             `json:"isPassed,omitempty"`
+	IsSkipped        bool             `json:"isSkipped,omitempty"`
 }
 
-// APIMeta contains metadata for API responses.
-type APIMeta struct {
-	Total          int         `json:"total,omitempty"`
-	Count          int         `json:"count,omitempty"`
-	Timestamp      string      `json:"timestamp"`
-	Source         string      `json:"source"`
-	Pagination     *Pagination `json:"pagination,omitempty"`
-	Filters        interface{} `json:"filters,omitempty"`
-	Note           string      `json:"note,omitempty"`
-	UpdateInterval int         `json:"updateInterval,omitempty"`
-	TimeMultiplier float64     `json:"timeMultiplier,omitempty"`
-}
-
-// APIResponse is the standard response wrapper.
-type APIResponse struct {
-	Data  interface{} `json:"data"`
-	Meta  *APIMeta    `json:"meta,omitempty"`
-	Error *APIError   `json:"error,omitempty"`
-}
-
-// APIError represents an API error response.
-type APIError struct {
-	Error     string `json:"error"`
-	Message   string `json:"message"`
-	Timestamp string `json:"timestamp"`
-}
-
-// GTFSStats contains statistics about loaded GTFS data.
-type GTFSStats struct {
-	Agencies   int    `json:"agencies"`
-	Stops      int    `json:"stops"`
-	Routes     int    `json:"routes"`
-	Trips      int    `json:"trips"`
-	StopTimes  int    `json:"stopTimes"`
-	DataLoaded bool   `json:"dataLoaded"`
-	Timestamp  string `json:"timestamp"`
+// Train represents a train with its current status and position.
+type TrainMonolith struct {
+	ID             string              `json:"id"`
+	Name           string              `json:"name"`
+	Category       string              `json:"category"`
+	Number         string              `json:"number"`
+	Operator       string              `json:"operator"`
+	From           string              `json:"from"`
+	To             string              `json:"to"`
+	Position       *PositionMonolith   `json:"position,omitempty"`
+	CurrentStation *StationMonolith    `json:"currentStation,omitempty"`
+	Delay          int                 `json:"delay"`
+	Cancelled      bool                `json:"cancelled"`
+	Speed          int                 `json:"speed"`
+	Direction      int                 `json:"direction"`
+	LastUpdate     string              `json:"lastUpdate"`
+	DepartureTime  string              `json:"departureTime,omitempty"`
+	ArrivalTime    string              `json:"arrivalTime,omitempty"`
+	Timetable      []TrainStopMonolith `json:"timetable,omitempty"`
 }
 
 // TrainStats contains aggregated train statistics.
-type TrainStats struct {
+type TrainStatsMonolith struct {
 	Total        int            `json:"total"`
 	ByCategory   map[string]int `json:"byCategory"`
 	ByOperator   map[string]int `json:"byOperator"`
@@ -134,8 +113,60 @@ type TrainStats struct {
 	AverageSpeed float64        `json:"averageSpeed"`
 }
 
+// ============================================================================
+// API RESPONSE DOMAIN
+// ============================================================================
+
+// Pagination holds pagination metadata.
+type PaginationMonolith struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
+// APIMeta contains metadata for API responses.
+type APIMetaMonolith struct {
+	Total          int                 `json:"total,omitempty"`
+	Count          int                 `json:"count,omitempty"`
+	Timestamp      string              `json:"timestamp"`
+	Source         string              `json:"source"`
+	Pagination     *PaginationMonolith `json:"pagination,omitempty"`
+	Filters        interface{}         `json:"filters,omitempty"`
+	Note           string              `json:"note,omitempty"`
+	UpdateInterval int                 `json:"updateInterval,omitempty"`
+	TimeMultiplier float64             `json:"timeMultiplier,omitempty"`
+}
+
+// APIResponse is the standard response wrapper.
+type APIResponseMonolith struct {
+	Data  interface{}       `json:"data"`
+	Meta  *APIMetaMonolith  `json:"meta,omitempty"`
+	Error *APIErrorMonolith `json:"error,omitempty"`
+}
+
+// APIError represents an API error response.
+type APIErrorMonolith struct {
+	Error     string `json:"error"`
+	Message   string `json:"message"`
+	Timestamp string `json:"timestamp"`
+}
+
+// ============================================================================
+// HEALTH/SYSTEM DOMAIN
+// ============================================================================
+
+// GTFSStats contains statistics about loaded GTFS data.
+type GTFSStatsMonolith struct {
+	Agencies   int    `json:"agencies"`
+	Stops      int    `json:"stops"`
+	Routes     int    `json:"routes"`
+	Trips      int    `json:"trips"`
+	StopTimes  int    `json:"stopTimes"`
+	DataLoaded bool   `json:"dataLoaded"`
+	Timestamp  string `json:"timestamp"`
+}
+
 // HealthResponse represents the health check response.
-type HealthResponse struct {
+type HealthResponseMonolith struct {
 	Status    string    `json:"status"`
 	Timestamp time.Time `json:"timestamp"`
 	Version   string    `json:"version"`
@@ -144,7 +175,7 @@ type HealthResponse struct {
 }
 
 // WebSocketMessage represents a WebSocket message.
-type WebSocketMessage struct {
+type WebSocketMessageMonolith struct {
 	Type      string      `json:"type"`
 	Message   string      `json:"message,omitempty"`
 	Data      interface{} `json:"data,omitempty"`
@@ -152,10 +183,12 @@ type WebSocketMessage struct {
 	GTFSReady bool        `json:"gtfs_loaded,omitempty"`
 }
 
-// GTFS Raw Data Structures (for CSV parsing)
+// ============================================================================
+// GTFS RAW DATA DOMAIN
+// ============================================================================
 
 // GTFSAgency represents an agency from agency.txt
-type GTFSAgency struct {
+type GTFSAgencyMonolith struct {
 	AgencyID       string `csv:"agency_id"`
 	AgencyName     string `csv:"agency_name"`
 	AgencyURL      string `csv:"agency_url"`
@@ -163,7 +196,7 @@ type GTFSAgency struct {
 }
 
 // GTFSStop represents a stop from stops.txt
-type GTFSStop struct {
+type GTFSStopMonolith struct {
 	StopID   string `csv:"stop_id"`
 	StopName string `csv:"stop_name"`
 	StopLat  string `csv:"stop_lat"`
@@ -171,7 +204,7 @@ type GTFSStop struct {
 }
 
 // GTFSRoute represents a route from routes.txt
-type GTFSRoute struct {
+type GTFSRouteMonolith struct {
 	RouteID        string `csv:"route_id"`
 	AgencyID       string `csv:"agency_id"`
 	RouteShortName string `csv:"route_short_name"`
@@ -180,7 +213,7 @@ type GTFSRoute struct {
 }
 
 // GTFSTrip represents a trip from trips.txt
-type GTFSTrip struct {
+type GTFSTripMonolith struct {
 	RouteID      string `csv:"route_id"`
 	ServiceID    string `csv:"service_id"`
 	TripID       string `csv:"trip_id"`
@@ -189,7 +222,7 @@ type GTFSTrip struct {
 }
 
 // GTFSStopTime represents a stop time from stop_times.txt
-type GTFSStopTime struct {
+type GTFSStopTimeMonolith struct {
 	TripID        string `csv:"trip_id"`
 	ArrivalTime   string `csv:"arrival_time"`
 	DepartureTime string `csv:"departure_time"`
@@ -198,7 +231,7 @@ type GTFSStopTime struct {
 }
 
 // GTFSCalendar represents a calendar entry from calendar.txt
-type GTFSCalendar struct {
+type GTFSCalendarMonolith struct {
 	ServiceID string `csv:"service_id"`
 	Monday    string `csv:"monday"`
 	Tuesday   string `csv:"tuesday"`
@@ -209,4 +242,38 @@ type GTFSCalendar struct {
 	Sunday    string `csv:"sunday"`
 	StartDate string `csv:"start_date"`
 	EndDate   string `csv:"end_date"`
+}
+
+// ============================================================================
+// FAVORITES DOMAIN
+// ============================================================================
+
+// FavoriteMonolith represents a user's favorite station with optional notes.
+type FavoriteMonolith struct {
+	ID        string          `json:"id"`
+	StationID string          `json:"stationId"`
+	Station   StationMonolith `json:"station"`
+	Nickname  string          `json:"nickname,omitempty"`
+	Notes     string          `json:"notes,omitempty"`
+	CreatedAt string          `json:"createdAt"`
+	UpdatedAt string          `json:"updatedAt,omitempty"`
+}
+
+// CreateFavoriteRequestMonolith is the request body for POST /api/favorites
+type CreateFavoriteRequestMonolith struct {
+	StationID string `json:"stationId"`
+	Nickname  string `json:"nickname"`
+	Notes     string `json:"notes"`
+}
+
+// UpdateFavoriteRequestMonolith is the request body for PUT /api/favorites/{id}
+type UpdateFavoriteRequestMonolith struct {
+	Nickname string `json:"nickname"`
+	Notes    string `json:"notes"`
+}
+
+// FavoriteValidationErrorMonolith represents validation errors
+type FavoriteValidationErrorMonolith struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
 }

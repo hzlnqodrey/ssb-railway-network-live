@@ -10,6 +10,8 @@ import { StationMarker } from './StationMarker'
 import { MapControls } from './MapControls'
 import { TrainDetails } from './TrainDetails'
 import { StationDetailsPanel } from './StationDetailsPanel'
+import { FloatingFavorites } from '@/components/favorites/FloatingFavorites'
+import { SwissTimePanel } from './SwissTimePanel'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useSwissRailwayData } from '@/hooks/useSwissRailwayData'
 import { cn, getTrainColor } from '@/lib/utils'
@@ -95,6 +97,26 @@ function TrainFollower({
     }
   }, [followedTrainId, trains, map, isFirstFollow])
 
+  return null
+}
+
+// Map zoom controller - exposes zoom functions via callback
+function MapZoomController({ 
+  onZoomReady 
+}: { 
+  onZoomReady: (zoomIn: () => void, zoomOut: () => void, resetView: () => void, getZoom: () => number) => void 
+}) {
+  const map = useMap()
+  
+  useEffect(() => {
+    const zoomIn = () => map.zoomIn()
+    const zoomOut = () => map.zoomOut()
+    const resetView = () => map.setView(SWISS_CENTER, DEFAULT_ZOOM)
+    const getZoom = () => map.getZoom()
+    
+    onZoomReady(zoomIn, zoomOut, resetView, getZoom)
+  }, [map, onZoomReady])
+  
   return null
 }
 
@@ -453,6 +475,27 @@ export default function SwissRailwayMap({ className, forceExpandControls = false
   const [timeMultiplier, setTimeMultiplier] = useState(() => getPersistedTimeMultiplier())
   const [swissTime, setSwissTime] = useState(() => formatSwissTimeNow())
   const [swissDate, setSwissDate] = useState(() => formatSwissDateNow())
+  
+  // Favorites state (for learning HTTP POST/PUT/DELETE)
+  const [stationToAddToFavorites, setStationToAddToFavorites] = useState<Station | null>(null)
+  const [trainToAddToFavorites, setTrainToAddToFavorites] = useState<Train | null>(null)
+  
+  // Zoom control functions (provided by MapZoomController inside MapContainer)
+  const zoomFunctionsRef = useRef<{
+    zoomIn: () => void
+    zoomOut: () => void
+    resetView: () => void
+    getZoom: () => number
+  } | null>(null)
+  
+  const handleZoomReady = useCallback((
+    zoomIn: () => void, 
+    zoomOut: () => void, 
+    resetView: () => void,
+    getZoom: () => number
+  ) => {
+    zoomFunctionsRef.current = { zoomIn, zoomOut, resetView, getZoom }
+  }, [])
 
   // Use our custom Swiss Railway data hook with time multiplier
   const {
@@ -539,6 +582,41 @@ export default function SwissRailwayMap({ className, forceExpandControls = false
     setSelectedStation(null)
   }, [])
 
+  // Handle adding station to favorites
+  const handleAddStationToFavorites = useCallback((station: Station) => {
+    setStationToAddToFavorites(station)
+  }, [])
+
+  // Handle adding train to favorites
+  const handleAddTrainToFavorites = useCallback((train: Train) => {
+    setTrainToAddToFavorites(train)
+  }, [])
+
+  // Handle station added callback (clears the station to add)
+  const handleStationAddedToFavorites = useCallback(() => {
+    setStationToAddToFavorites(null)
+  }, [])
+
+  // Handle train added callback (clears the train to add)
+  const handleTrainAddedToFavorites = useCallback(() => {
+    setTrainToAddToFavorites(null)
+  }, [])
+
+  // Handle favorite train selection with auto-follow
+  const handleFavoriteTrainSelect = useCallback((trainId: string) => {
+    const train = trains.find(t => t.id === trainId)
+    if (train) {
+      setSelectedTrain(train)
+      setSelectedStation(null)
+    }
+  }, [trains])
+
+  // Handle auto-follow from favorites (immediately starts following)
+  const handleAutoFollowFromFavorites = useCallback((trainId: string) => {
+    setFollowedTrainId(trainId)
+    setIsFirstFollow(true)
+  }, [])
+
   // Update selected train with latest data
   const selectedTrainId = selectedTrain?.id
   useEffect(() => {
@@ -618,6 +696,7 @@ export default function SwissRailwayMap({ className, forceExpandControls = false
         />
 
         <MapInitializer trains={trains} />
+        <MapZoomController onZoomReady={handleZoomReady} />
         <TrainFollower 
           followedTrainId={followedTrainId} 
           trains={trains} 
@@ -637,6 +716,7 @@ export default function SwissRailwayMap({ className, forceExpandControls = false
             station={station}
             onClick={() => handleStationClick(station)}
             isSelected={selectedStation?.id === station.id}
+            onAddToFavorites={() => handleAddStationToFavorites(station)}
           />
         ))}
 
@@ -666,6 +746,9 @@ export default function SwissRailwayMap({ className, forceExpandControls = false
         trainsCount={trains.length}
         stationsCount={stations.length}
         forceExpanded={forceExpandControls}
+        onZoomIn={() => zoomFunctionsRef.current?.zoomIn()}
+        onZoomOut={() => zoomFunctionsRef.current?.zoomOut()}
+        onResetView={() => zoomFunctionsRef.current?.resetView()}
       />
 
       {/* Train Details Panel */}
@@ -677,6 +760,7 @@ export default function SwissRailwayMap({ className, forceExpandControls = false
           isFollowing={followedTrainId === selectedTrain.id}
           onDrawRoute={() => handleDrawRoute(selectedTrain.id)}
           isRouteDrawn={routeTrainId === selectedTrain.id}
+          onAddToFavorites={() => handleAddTrainToFavorites(selectedTrain)}
         />
       )}
 
@@ -688,75 +772,29 @@ export default function SwissRailwayMap({ className, forceExpandControls = false
         />
       )}
 
-      {/* Time Display and Train Counter */}
-      <div className="absolute top-4 right-4 z-[1000]">
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 text-center min-w-[140px]">
-          {/* Current Swiss Time */}
-          <div className="text-2xl font-bold text-red-600 dark:text-red-400 font-mono">
-            {swissTime}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            🇨🇭 {swissDate}
-          </div>
-          
-          {/* Train Count */}
-          <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">
-            {trains.length} trains
-          </div>
-          
-          {/* Time Multiplier Control */}
-          <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-            <span>Speed: </span>
-            <select 
-              className="bg-transparent border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs font-medium cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-              value={timeMultiplier}
-              onChange={(e) => setTimeMultiplier(Number(e.target.value))}
-            >
-              <option value={1}>1x (Real-time)</option>
-              <option value={5}>5x</option>
-              <option value={10}>10x</option>
-              <option value={20}>20x</option>
-              <option value={50}>50x</option>
-              <option value={100}>100x</option>
-            </select>
-          </div>
+      {/* Floating Favorites - Unified favorites panel (draggable) */}
+      <FloatingFavorites
+        onStationSelect={handleStationClick}
+        onTrainSelect={handleFavoriteTrainSelect}
+        onAutoFollowTrain={handleAutoFollowFromFavorites}
+        currentTrains={trains}
+        stationToAdd={stationToAddToFavorites}
+        trainToAdd={trainToAddToFavorites}
+        onStationAdded={handleStationAddedToFavorites}
+        onTrainAdded={handleTrainAddedToFavorites}
+      />
 
-          {/* Live Status */}
-          <div className={cn(
-            "flex items-center justify-center space-x-1 mt-3 px-2 py-1 rounded-full text-xs font-medium",
-            isRealtimeEnabled 
-              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-          )}>
-            <div className={cn(
-              "w-1.5 h-1.5 rounded-full",
-              isRealtimeEnabled ? "bg-green-500 animate-pulse" : "bg-gray-500"
-            )} />
-            <span>{isRealtimeEnabled ? 'Live' : 'Paused'}</span>
-          </div>
-
-          {/* Following Indicator */}
-          {followedTrainId && (
-            <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 flex items-center justify-center gap-1">
-              <span className="animate-pulse">📍</span>
-              <span>Following</span>
-            </div>
-          )}
-
-          {/* Route Indicator */}
-          {routeTrainId && (
-            <div className="mt-1 text-xs text-purple-600 dark:text-purple-400 flex items-center justify-center gap-1">
-              <span>🛤️</span>
-              <span>Route shown</span>
-            </div>
-          )}
-
-          {/* Data Source */}
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            🇨🇭 Swiss GTFS Timetable
-          </div>
-        </div>
-      </div>
+      {/* Time Display and Train Counter - Draggable */}
+      <SwissTimePanel
+        swissTime={swissTime}
+        swissDate={swissDate}
+        trainsCount={trains.length}
+        timeMultiplier={timeMultiplier}
+        setTimeMultiplier={setTimeMultiplier}
+        isRealtimeEnabled={isRealtimeEnabled}
+        followedTrainId={followedTrainId}
+        routeTrainId={routeTrainId}
+      />
     </div>
   )
 }

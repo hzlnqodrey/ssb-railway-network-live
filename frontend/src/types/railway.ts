@@ -259,3 +259,74 @@ export class SwissRailwayError extends Error {
     this.name = 'SwissRailwayError'
   }
 }
+
+// ============================================================================
+// FAVORITES - Feature for learning HTTP POST/PUT/DELETE methods
+// ============================================================================
+
+/**
+ * Represents a user's favorite station with optional notes.
+ */
+export interface Favorite {
+  id: string           // Unique favorite ID (UUID)
+  stationId: string    // Reference to station
+  station: Station     // Embedded station data
+  nickname?: string    // User-defined nickname (max 100 chars)
+  notes?: string       // User notes (max 500 chars)
+  createdAt: string    // ISO8601 timestamp
+  updatedAt?: string   // ISO8601 timestamp
+}
+
+/**
+ * Request body for creating a new favorite.
+ */
+export interface CreateFavoriteRequest {
+  stationId: string    // Required: station ID to favorite
+  nickname?: string    // Optional: custom name
+  notes?: string       // Optional: notes
+}
+
+/**
+ * Request body for updating a favorite.
+ */
+export interface UpdateFavoriteRequest {
+  nickname?: string    // Optional: update nickname
+  notes?: string       // Optional: update notes
+}
+
+// ============================================================================
+// FAVORITE TRAIN - With auto-follow feature
+// ============================================================================
+
+/**
+ * Represents a user's favorite train with auto-follow settings.
+ */
+export interface FavoriteTrain {
+  id: string           // Unique favorite ID (UUID)
+  trainId: string      // Reference to train
+  train: Train         // Embedded train data (snapshot)
+  nickname?: string    // User-defined nickname (max 100 chars)
+  notes?: string       // User notes (max 500 chars)
+  autoFollow: boolean  // Auto-follow when selected
+  createdAt: string    // ISO8601 timestamp
+  updatedAt?: string   // ISO8601 timestamp
+}
+
+/**
+ * Request body for creating a favorite train.
+ */
+export interface CreateFavoriteTrainRequest {
+  trainId: string      // Required: train ID to favorite
+  nickname?: string    // Optional: custom name
+  notes?: string       // Optional: notes
+  autoFollow?: boolean // Optional: enable auto-follow
+}
+
+/**
+ * Request body for updating a favorite train.
+ */
+export interface UpdateFavoriteTrainRequest {
+  nickname?: string    // Optional: update nickname
+  notes?: string       // Optional: update notes
+  autoFollow?: boolean // Optional: update auto-follow setting
+}

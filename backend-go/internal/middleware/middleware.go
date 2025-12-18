@@ -1,4 +1,31 @@
 // Package middleware provides HTTP middleware for the Swiss Railway API.
+//
+// ============================================================================
+// MONOLITHIC VERSION - For Documentation & Comparison
+// ============================================================================
+// This file is kept for educational purposes to compare with the microservice
+// approach where middleware is split into concern-based files:
+//   - logging.go, security.go, ratelimit.go, recovery.go, chain.go
+//
+// COMPARISON:
+// ┌─────────────────┬──────────────────────────────────────────────────────────┐
+// │ MONOLITH        │ MICROSERVICE                                             │
+// ├─────────────────┼──────────────────────────────────────────────────────────┤
+// │ middleware.go   │ logging.go + security.go + ratelimit.go + recovery.go    │
+// │ (all in one)    │ + chain.go (split by concern)                            │
+// ├─────────────────┼──────────────────────────────────────────────────────────┤
+// │ Pros:           │ Pros:                                                    │
+// │ - Simple        │ - Clear separation of concerns                           │
+// │ - Easy to find  │ - Easier to test individually                            │
+// │ - Less files    │ - Teams can own different concerns                       │
+// │                 │ - Smaller files, easier code review                      │
+// ├─────────────────┼──────────────────────────────────────────────────────────┤
+// │ Cons:           │ Cons:                                                    │
+// │ - Can get large │ - More files to navigate                                 │
+// │ - Mixed concerns│ - Need good documentation                                │
+// │ - Hard to test  │ - Import paths can get complex                           │
+// └─────────────────┴──────────────────────────────────────────────────────────┘
+// ============================================================================
 package middleware
 
 import (
@@ -8,13 +35,17 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Logging logs all HTTP requests.
-func Logging(next http.Handler) http.Handler {
+// ============================================================================
+// LOGGING CONCERN
+// ============================================================================
+
+// LoggingMonolith logs all HTTP requests.
+func LoggingMonolith(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
 		// Wrap response writer to capture status code
-		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+		wrapped := &responseWriterMonolith{ResponseWriter: w, statusCode: http.StatusOK}
 
 		next.ServeHTTP(wrapped, r)
 
@@ -28,19 +59,23 @@ func Logging(next http.Handler) http.Handler {
 	})
 }
 
-// responseWriter wraps http.ResponseWriter to capture status code.
-type responseWriter struct {
+// responseWriterMonolith wraps http.ResponseWriter to capture status code.
+type responseWriterMonolith struct {
 	http.ResponseWriter
 	statusCode int
 }
 
-func (rw *responseWriter) WriteHeader(code int) {
+func (rw *responseWriterMonolith) WriteHeader(code int) {
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
 }
 
-// SecurityHeaders adds security headers to responses.
-func SecurityHeaders(next http.Handler) http.Handler {
+// ============================================================================
+// SECURITY CONCERN
+// ============================================================================
+
+// SecurityHeadersMonolith adds security headers to responses.
+func SecurityHeadersMonolith(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Security headers
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -53,8 +88,46 @@ func SecurityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// Recovery recovers from panics and returns 500 error.
-func Recovery(next http.Handler) http.Handler {
+// ContentTypeMonolith sets the Content-Type header for JSON responses.
+func ContentTypeMonolith(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// CSRFProtectionMonolith provides CSRF protection for mutating HTTP methods.
+func CSRFProtectionMonolith(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" || r.Method == "PUT" || r.Method == "DELETE" || r.Method == "PATCH" {
+			xRequestedWith := r.Header.Get("X-Requested-With")
+			contentType := r.Header.Get("Content-Type")
+
+			isAjax := xRequestedWith == "XMLHttpRequest"
+			isJSON := contentType != "" && (contentType == "application/json" ||
+				len(contentType) > 16 && contentType[:16] == "application/json")
+
+			if !isAjax && !isJSON {
+				log.Warn().
+					Str("method", r.Method).
+					Str("path", r.URL.Path).
+					Msg("CSRF protection: request blocked")
+
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(`{"error":"Forbidden","message":"CSRF protection"}`))
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// ============================================================================
+// RECOVERY CONCERN
+// ============================================================================
+
+// RecoveryMonolith recovers from panics and returns 500 error.
+func RecoveryMonolith(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -67,17 +140,20 @@ func Recovery(next http.Handler) http.Handler {
 	})
 }
 
-// RateLimiter provides simple in-memory rate limiting per IP.
-// For production, use Redis-backed rate limiting.
-type RateLimiter struct {
+// ============================================================================
+// RATE LIMITING CONCERN
+// ============================================================================
+
+// RateLimiterMonolith provides simple in-memory rate limiting per IP.
+type RateLimiterMonolith struct {
 	requests map[string][]time.Time
 	limit    int
 	window   time.Duration
 }
 
-// NewRateLimiter creates a new rate limiter.
-func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
-	return &RateLimiter{
+// NewRateLimiterMonolith creates a new rate limiter.
+func NewRateLimiterMonolith(limit int, window time.Duration) *RateLimiterMonolith {
+	return &RateLimiterMonolith{
 		requests: make(map[string][]time.Time),
 		limit:    limit,
 		window:   window,
@@ -85,14 +161,13 @@ func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 }
 
 // Limit is the middleware handler for rate limiting.
-func (rl *RateLimiter) Limit(next http.Handler) http.Handler {
+func (rl *RateLimiterMonolith) Limit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := r.RemoteAddr
 
 		now := time.Now()
 		windowStart := now.Add(-rl.window)
 
-		// Clean old requests and count recent ones
 		var recentRequests []time.Time
 		for _, t := range rl.requests[ip] {
 			if t.After(windowStart) {
@@ -112,18 +187,26 @@ func (rl *RateLimiter) Limit(next http.Handler) http.Handler {
 	})
 }
 
-// ContentType sets the Content-Type header for JSON responses.
-func ContentType(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		next.ServeHTTP(w, r)
-	})
-}
+// ============================================================================
+// CHAINING CONCERN
+// ============================================================================
 
-// Chain chains multiple middleware together.
-func Chain(h http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
+// ChainMonolith chains multiple middleware together.
+func ChainMonolith(h http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		h = middlewares[i](h)
 	}
 	return h
+}
+
+// ValidateRequestBodyMonolith validates that request body is within size limits.
+func ValidateRequestBodyMonolith(maxSize int64) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH" {
+				r.Body = http.MaxBytesReader(w, r.Body, maxSize)
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }

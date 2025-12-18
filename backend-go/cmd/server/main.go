@@ -45,6 +45,7 @@ func main() {
 	healthHandler := handlers.NewHealthHandler(gtfsService)
 	stationsHandler := handlers.NewStationsHandler(gtfsService, swissService, cfg.EnableSwissAPI)
 	trainsHandler := handlers.NewTrainsHandler(gtfsService, swissService, cfg.EnableSwissAPI)
+	favoritesHandler := handlers.NewFavoritesHandler(gtfsService)
 
 	// Initialize WebSocket hub
 	wsHub := websocket.NewHub(gtfsService, cfg.WSUpdateInterval)
@@ -52,7 +53,7 @@ func main() {
 	defer wsHub.Stop()
 
 	// Create router
-	router := setupRouter(cfg, healthHandler, stationsHandler, trainsHandler, wsHub)
+	router := setupRouter(cfg, healthHandler, stationsHandler, trainsHandler, favoritesHandler, wsHub)
 
 	// Setup CORS
 	corsHandler := cors.New(cors.Options{
@@ -164,6 +165,7 @@ func setupRouter(
 	healthHandler *handlers.HealthHandler,
 	stationsHandler *handlers.StationsHandler,
 	trainsHandler *handlers.TrainsHandler,
+	favoritesHandler *handlers.FavoritesHandler,
 	wsHub *websocket.Hub,
 ) *mux.Router {
 	router := mux.NewRouter()
@@ -180,6 +182,7 @@ func setupRouter(
 				"health": "/health",
 				"trains": "/api/trains",
 				"stations": "/api/stations",
+				"favorites": "/api/favorites",
 				"websocket": "ws://localhost:%s/ws"
 			}
 		}`, cfg.Environment, time.Now().Format(time.RFC3339), cfg.Port)
@@ -205,6 +208,45 @@ func setupRouter(
 	api.HandleFunc("/trains/live", trainsHandler.GetLiveTrains).Methods("GET")
 	api.HandleFunc("/trains/stats/summary", trainsHandler.GetTrainStats).Methods("GET")
 	api.HandleFunc("/trains/{id}", trainsHandler.GetTrain).Methods("GET")
+
+	// ========================================================================
+	// FAVORITES ROUTES - Learning HTTP POST/PUT/DELETE methods
+	// ========================================================================
+	// STATIONS:
+	// GET    /api/favorites/stations      - List all favorite stations
+	// POST   /api/favorites/stations      - Add station to favorites
+	// GET    /api/favorites/stations/{id} - Get a favorite station
+	// PUT    /api/favorites/stations/{id} - Update favorite station
+	// DELETE /api/favorites/stations/{id} - Remove favorite station
+	//
+	// TRAINS (with auto-follow):
+	// GET    /api/favorites/trains        - List all favorite trains
+	// POST   /api/favorites/trains        - Add train to favorites
+	// GET    /api/favorites/trains/{id}   - Get a favorite train
+	// PUT    /api/favorites/trains/{id}   - Update favorite train
+	// DELETE /api/favorites/trains/{id}   - Remove favorite train
+	// ========================================================================
+
+	// Legacy routes (backwards compatibility)
+	api.HandleFunc("/favorites", favoritesHandler.GetFavorites).Methods("GET")
+	api.HandleFunc("/favorites", favoritesHandler.CreateFavorite).Methods("POST")
+	api.HandleFunc("/favorites/{id}", favoritesHandler.GetFavorite).Methods("GET")
+	api.HandleFunc("/favorites/{id}", favoritesHandler.UpdateFavorite).Methods("PUT")
+	api.HandleFunc("/favorites/{id}", favoritesHandler.DeleteFavorite).Methods("DELETE")
+
+	// Station favorites (explicit path)
+	api.HandleFunc("/favorites/stations", favoritesHandler.GetFavorites).Methods("GET")
+	api.HandleFunc("/favorites/stations", favoritesHandler.CreateFavorite).Methods("POST")
+	api.HandleFunc("/favorites/stations/{id}", favoritesHandler.GetFavorite).Methods("GET")
+	api.HandleFunc("/favorites/stations/{id}", favoritesHandler.UpdateFavorite).Methods("PUT")
+	api.HandleFunc("/favorites/stations/{id}", favoritesHandler.DeleteFavorite).Methods("DELETE")
+
+	// Train favorites (with auto-follow feature)
+	api.HandleFunc("/favorites/trains", favoritesHandler.GetFavoriteTrains).Methods("GET")
+	api.HandleFunc("/favorites/trains", favoritesHandler.CreateFavoriteTrain).Methods("POST")
+	api.HandleFunc("/favorites/trains/{id}", favoritesHandler.GetFavoriteTrain).Methods("GET")
+	api.HandleFunc("/favorites/trains/{id}", favoritesHandler.UpdateFavoriteTrain).Methods("PUT")
+	api.HandleFunc("/favorites/trains/{id}", favoritesHandler.DeleteFavoriteTrain).Methods("DELETE")
 
 	// WebSocket endpoint
 	router.HandleFunc("/ws", wsHub.HandleWebSocket)

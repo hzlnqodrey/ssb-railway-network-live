@@ -10,7 +10,8 @@ import {
   Zap, 
   Navigation,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Star
 } from 'lucide-react'
 import { Train as TrainType } from '@/types/railway'
 import { cn, getTrainColor, formatDelay, getRelativeTime } from '@/lib/utils'
@@ -22,9 +23,10 @@ interface TrainDetailsProps {
   isFollowing?: boolean
   onDrawRoute?: () => void
   isRouteDrawn?: boolean
+  onAddToFavorites?: () => void
 }
 
-export function TrainDetails({ train, onClose, onFollow, isFollowing = false, onDrawRoute, isRouteDrawn = false }: TrainDetailsProps) {
+export function TrainDetails({ train, onClose, onFollow, isFollowing = false, onDrawRoute, isRouteDrawn = false, onAddToFavorites }: TrainDetailsProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'route' | 'occupancy'>('overview')
   
   const isDelayed = (train.delay || 0) > 2
@@ -54,12 +56,23 @@ export function TrainDetails({ train, onClose, onFollow, isFollowing = false, on
                 <p className="text-sm opacity-90">to {train.to}</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              {onAddToFavorites && (
+                <button
+                  onClick={onAddToFavorites}
+                  className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                  title="Add to favorites"
+                >
+                  <Star className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Status Indicators */}
